@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx" />
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx" />
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/about</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/about" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/about" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/about" />
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/about</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/about" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/about" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/about" />
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/pricing" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/pricing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/pricing" />
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/pricing</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/pricing" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/pricing" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/pricing" />
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/blog</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/blog" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/blog" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/blog" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/blog</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/blog" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/blog" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/blog" />
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/faq</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/faq" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/faq" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/faq" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/faq</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/faq" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/faq" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/faq" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/contact</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/contact" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/contact" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/contact" />
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/contact</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/contact" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/contact" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/contact" />
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/fleet</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/fleet" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/fleet" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/fleet" />
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/fleet</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/fleet" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/fleet" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/fleet" />
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/reserva</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/reserva" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/reserva" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/reserva" />
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/reserva</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/reserva" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/reserva" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/reserva" />
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/airports</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/airports" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/airports" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/airports" />
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/airports</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/airports" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/airports" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/airports" />
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+</urlset>
