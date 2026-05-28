@@ -32,6 +32,8 @@ const formatDate = (value = new Date()) => {
 const formatMoney = (value = 0) =>
   `$${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
 
+const formatWholeDays = (value = 0) => Math.max(0, Math.ceil(Number(value || 0)));
+
 const loadImage = (src) =>
   new Promise((resolve) => {
     const image = new Image();
@@ -197,7 +199,7 @@ export const generateReservationPDF = async ({
     aircraft?.name || getAircraftName?.(firstCustomerRoute.aircraft_id) || "-";
   const pax = aircraft?.capacity_passengers || firstCustomerRoute.passengers || 0;
   const totalNights = breakdowns.reduce(
-    (sum, item) => sum + (item.nights || 0),
+    (sum, item) => sum + formatWholeDays(item.nights),
     0,
   );
   const taxRate = totals.subtotal

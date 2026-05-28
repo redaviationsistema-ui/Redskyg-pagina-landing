@@ -14,6 +14,8 @@
           {{ t.descriptionLine1 }}
           <br />
           {{ t.descriptionLine2 }}
+          <br />
+          {{ t.descriptionLine3 }}
         </p>
 
         <div class="divider"></div>
@@ -43,6 +45,8 @@ const translations = {
     descriptionLine1: "Recibimos correctamente tu solicitud de vuelo ejecutivo.",
     descriptionLine2:
       "Un integrante de nuestro equipo de aviacion se pondra en contacto contigo en breve para afinar los detalles operativos.",
+    descriptionLine3:
+      "Tu cotizacion fue enviada al correo registrado. Si no la encuentras en tu bandeja principal, te recomendamos revisar la carpeta de spam o correo no deseado.",
     returnHome: "Volver al inicio",
   },
   "en-us": {
@@ -52,6 +56,8 @@ const translations = {
       "Your executive flight request has been successfully received.",
     descriptionLine2:
       "A member of our aviation team will contact you shortly to finalize operational details.",
+    descriptionLine3:
+      "Your quotation was sent to the email address provided. If you do not see it in your inbox, please check your spam or junk folder.",
     returnHome: "Return to homepage",
   },
 };
