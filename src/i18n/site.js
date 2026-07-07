@@ -105,11 +105,6 @@ export const LOCALE_CONFIG = {
       pricing: "Pricing",
       contact: "Contact",
     },
-    layout: {
-      whatsappCta: "Quote on WhatsApp",
-      whatsappMessage:
-        "Hello, I would like to request a private flight quote. Could you share more information?",
-    },
     footer: {
       description:
         "Sky Group is a private aviation company with over 20 years of experience, providing safe, efficient, and fully personalized private flight solutions across Mexico and worldwide.",

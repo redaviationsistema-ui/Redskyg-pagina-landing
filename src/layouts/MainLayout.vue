@@ -23,7 +23,6 @@
         </svg>
       </div>
 
-      <span class="whatsapp-text">{{ copy.whatsappCta }}</span>
     </a>
   </div>
 </template>
@@ -35,7 +34,14 @@ import AppFooter from "../components/AppFooter.vue";
 import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
 
 const { localeConfig } = useLocalizedNavigation();
-const copy = computed(() => localeConfig.value.layout);
+const copy = computed(
+  () =>
+    localeConfig.value.layout ?? {
+      whatsappCta: "WhatsApp",
+      whatsappMessage:
+        "Hello, I would like to request a private flight quote.",
+    },
+);
 const whatsAppHref = computed(
   () => `https://wa.me/525586186576?text=${encodeURIComponent(copy.value.whatsappMessage)}`,
 );
