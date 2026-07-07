@@ -38,9 +38,90 @@
             <p>{{ content.loading }}</p>
           </div>
 
-          <div v-else class="fleet-list">
+          <div v-else>
+            <div class="fleet-filters">
+              <label class="fleet-field">
+                <span>{{ filterLabels.search }}</span>
+                <div class="fleet-combobox">
+                  <input
+                    v-model.trim="searchQuery"
+                    type="search"
+                    :placeholder="filterLabels.searchPlaceholder"
+                    @focus="isAircraftComboboxOpen = true"
+                    @blur="handleAircraftComboboxBlur"
+                  />
+
+                  <div
+                    v-if="isAircraftComboboxOpen && filteredAircraftSearchOptions.length"
+                    class="fleet-combobox__menu"
+                  >
+                    <button
+                      v-for="option in filteredAircraftSearchOptions"
+                      :key="option"
+                      type="button"
+                      class="fleet-combobox__option"
+                      @mousedown.prevent="selectAircraftSearchOption(option)"
+                    >
+                      {{ option }}
+                    </button>
+                  </div>
+                </div>
+              </label>
+
+              <label class="fleet-field">
+                <span>{{ filterLabels.category }}</span>
+                <select v-model="selectedCategory">
+                  <option value="">{{ filterLabels.allCategories }}</option>
+                  <option
+                    v-for="option in categoryOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="fleet-field">
+                <span>{{ filterLabels.base }}</span>
+                <select v-model="selectedBase">
+                  <option value="">{{ filterLabels.allBases }}</option>
+                  <option
+                    v-for="base in baseOptions"
+                    :key="base.value"
+                    :value="base.value"
+                  >
+                    {{ base.label }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="fleet-field">
+                <span>{{ filterLabels.passengers }}</span>
+                <input
+                  v-model.number="minimumPassengers"
+                  type="number"
+                  min="0"
+                  step="1"
+                  :placeholder="filterLabels.passengersPlaceholder"
+                />
+              </label>
+            </div>
+
+            <p class="fleet-results">
+              {{ filteredAircraft.length }} {{ filterLabels.results }}
+            </p>
+
+            <div
+              v-if="!paginatedAircraft.length"
+              class="fleet-empty"
+            >
+              {{ filterLabels.empty }}
+            </div>
+
+            <div v-else class="fleet-list">
             <article
-              v-for="item in aeronaves"
+              v-for="item in paginatedAircraft"
               :key="item.id"
               class="aircraft-row"
             >
@@ -60,9 +141,9 @@
               </button>
 
               <div class="aircraft-main">
-                <span class="aircraft-category">{{ item.categoria }}</span>
+                <span class="aircraft-category">{{ getAircraftCategoryLabel(item) }}</span>
                 <h3>{{ item.nombre }}</h3>
-                <p>{{ item.descripcion }}</p>
+                <p>{{ getAircraftDescription(item) }}</p>
 
                 <div class="aircraft-specs">
                   <span>
@@ -107,6 +188,7 @@
                 </button>
               </aside>
             </article>
+            </div>
           </div>
 
           <div class="pagination" v-if="totalPages > 1">
@@ -174,7 +256,7 @@
           </div>
 
           <div class="modal-info">
-            <span class="aircraft-category">{{ selectedAircraft.categoria }}</span>
+            <span class="aircraft-category">{{ getAircraftCategoryLabel(selectedAircraft) }}</span>
             <h2>{{ selectedAircraft.nombre }}</h2>
 
             <div class="modal-specs">
@@ -192,7 +274,7 @@
               </div>
             </div>
 
-            <p>{{ selectedAircraft.descripcion }}</p>
+            <p>{{ getAircraftDescription(selectedAircraft) }}</p>
 
             <button
               class="quote-button quote-button--modal"
@@ -209,39 +291,303 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { supabase } from "@/supabase";
 import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
 
-defineProps({
+const props = defineProps({
   content: {
     type: Object,
     required: true,
   },
 });
 
+const AIRCRAFT_TABLE = "aircraft_fleet";
+
 const pageSize = 6;
 const currentPage = ref(1);
 const loadingMore = ref(false);
-const totalCount = ref(0);
-const totalPages = ref(0);
-const aeronaves = ref([]);
+const allAircraft = ref([]);
 const selectedAircraft = ref(null);
 const showModal = ref(false);
 const currentImage = ref(0);
 const modalLoading = ref(false);
-const aircraftFleet = ref([]);
+const searchQuery = ref("");
+const selectedCategory = ref("");
+const selectedBase = ref("");
+const minimumPassengers = ref(null);
+const airportLabels = ref({});
+const isAircraftComboboxOpen = ref(false);
 
 const router = useRouter();
-const { localizedPath } = useLocalizedNavigation();
+const { localizedPath, locale } = useLocalizedNavigation();
 let interval = null;
+
+const categoryOptions = computed(() => [
+  {
+    value: "Helicóptero",
+    label: filterLabels.value.categoryOptions?.helicopter || "Helicóptero · trayectos cortos y acceso flexible",
+  },
+  {
+    value: "Monomotor Pistón",
+    label: filterLabels.value.categoryOptions?.singleEngine || "Avión pequeño · opción práctica para pocos pasajeros",
+  },
+  {
+    value: "Turbohélice",
+    label: filterLabels.value.categoryOptions?.turboprop || "Turbohélice · eficiente para vuelos regionales",
+  },
+  {
+    value: "Jet ligero (Light Jet)",
+    label: filterLabels.value.categoryOptions?.lightJet || "Jet ligero · rápido para grupos pequeños",
+  },
+  {
+    value: "Midsize Jet (Mid Jet)",
+    label: filterLabels.value.categoryOptions?.midJet || "Jet mediano · más espacio y alcance",
+  },
+  {
+    value: "Super Midsize Jet",
+    label: filterLabels.value.categoryOptions?.superMidJet || "Jet grande · más comodidad para viajes largos",
+  },
+  {
+    value: "Heavy Jet",
+    label: filterLabels.value.categoryOptions?.heavyJet || "Jet de largo alcance · cabina amplia",
+  },
+  {
+    value: "Regional Jet",
+    label: filterLabels.value.categoryOptions?.regionalJet || "Jet regional · capacidad alta para grupos",
+  },
+]);
+
+const filterLabels = computed(() => ({
+  search: props.content.filters?.search || "Buscar",
+  searchPlaceholder:
+    props.content.filters?.searchPlaceholder || "Nombre o fabricante",
+  category: props.content.filters?.category || "Categoría",
+  allCategories: props.content.filters?.allCategories || "Todas",
+  base: props.content.filters?.base || "Base",
+  allBases: props.content.filters?.allBases || "Todas",
+  passengers: props.content.filters?.passengers || "Pasajeros mínimos",
+  passengersPlaceholder:
+    props.content.filters?.passengersPlaceholder || "Mínimo de pasajeros",
+  results: props.content.filters?.results || "aeronaves encontradas",
+  empty:
+    props.content.filters?.empty || "No encontramos aeronaves con esos filtros.",
+  categoryOptions: props.content.filters?.categoryOptions || {},
+}));
 
 const assetUrl = (path = "") =>
   `${import.meta.env.BASE_URL}${String(path).replace(/^\/+/, "")}`;
 
+const tryParseJson = (value) => {
+  if (typeof value !== "string") return value;
+
+  const trimmed = value.trim();
+  if (
+    !(trimmed.startsWith("[") && trimmed.endsWith("]")) &&
+    !(trimmed.startsWith("{") && trimmed.endsWith("}"))
+  ) {
+    return value;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const tryParsePostgresArray = (value) => {
+  if (typeof value !== "string") return value;
+
+  const trimmed = value.trim();
+  if (!(trimmed.startsWith("{") && trimmed.endsWith("}"))) {
+    return value;
+  }
+
+  const inner = trimmed.slice(1, -1).trim();
+  if (!inner) return [];
+
+  return inner
+    .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+    .map((item) => item.trim().replace(/^"(.*)"$/, "$1"))
+    .map((item) => item.replace(/\\"/g, '"'))
+    .filter(Boolean);
+};
+
+const normalizeImageValue = (value) => {
+  const parsedValue = tryParsePostgresArray(tryParseJson(value));
+
+  if (!parsedValue) return [];
+
+  if (Array.isArray(parsedValue)) {
+    return parsedValue.flatMap((item) => normalizeImageValue(item));
+  }
+
+  if (typeof parsedValue === "string") {
+    const trimmed = parsedValue.trim();
+    return trimmed ? [trimmed] : [];
+  }
+
+  if (parsedValue && typeof parsedValue === "object") {
+    return [parsedValue.url, parsedValue.imagen_url, parsedValue.publicUrl]
+      .filter((item) => typeof item === "string" && item.trim().length > 0);
+  }
+
+  return [];
+};
+
+const normalizeImageList = (...sources) => [
+  ...new Set(sources.flatMap((source) => normalizeImageValue(source))),
+];
+
+const getPrimaryImage = (item) =>
+  normalizeImageList(item.imagen_url)[0] ||
+  normalizeImageList(item.exterior_images)[0] ||
+  normalizeImageList(item.interior_images)[0] ||
+  null;
+
+const normalizeText = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const isEnglish = computed(() => locale.value === "en-us");
+
+const aircraftCategoryLabels = {
+  "Helicóptero": {
+    "es-mx": "Helicóptero",
+    "en-us": "Helicopter",
+  },
+  "Monomotor Pistón": {
+    "es-mx": "Monomotor Pistón",
+    "en-us": "Single-Engine Piston",
+  },
+  Turbohélice: {
+    "es-mx": "Turbohélice",
+    "en-us": "Turboprop",
+  },
+  "Jet ligero (Light Jet)": {
+    "es-mx": "Jet ligero (Light Jet)",
+    "en-us": "Light Jet",
+  },
+  "Midsize Jet (Mid Jet)": {
+    "es-mx": "Midsize Jet (Mid Jet)",
+    "en-us": "Midsize Jet",
+  },
+  "Super Midsize Jet": {
+    "es-mx": "Super Midsize Jet",
+    "en-us": "Super Midsize Jet",
+  },
+  "Heavy Jet": {
+    "es-mx": "Heavy Jet",
+    "en-us": "Heavy Jet",
+  },
+  "Regional Jet": {
+    "es-mx": "Regional Jet",
+    "en-us": "Regional Jet",
+  },
+};
+
+const getAircraftCategoryLabel = (item) => {
+  const category = String(item?.categoria || "").trim();
+  if (!category) return "";
+
+  const localizedCategory = aircraftCategoryLabels[category]?.[locale.value];
+  return localizedCategory || category;
+};
+
+const getAircraftDescription = (item) => {
+  const name = item?.nombre || "";
+  const category = getAircraftCategoryLabel(item);
+  const passengers = item?.capacidad_pasajeros || "-";
+  const speed = item?.cruise_speed_knots || item?.alcance_horas || "-";
+  const range = item?.alcance_nm || "-";
+  const description = String(item?.descripcion || "").trim();
+
+  if (!isEnglish.value) {
+    return (
+      description ||
+      `${name} ${category.toLowerCase()} con capacidad para ${passengers} pasajeros, velocidad crucero aproximada de ${speed} knots y autonomia aproximada de ${range} NM.`
+    );
+  }
+
+  return `${name} ${category.toLowerCase()} with capacity for ${passengers} passengers, estimated cruise speed of ${speed} knots, and approximate range of ${range} NM.`;
+};
+
+const getAirportLabel = (code) => {
+  const normalizedCode = String(code || "").trim().toUpperCase();
+  if (!normalizedCode) return "";
+
+  return airportLabels.value[normalizedCode] || `Base ${normalizedCode}`;
+};
+
+const baseOptions = computed(() =>
+  [...new Set(allAircraft.value.map((item) => String(item.base || "").trim().toUpperCase()).filter(Boolean))]
+    .sort()
+    .map((code) => ({
+      value: code,
+      label: getAirportLabel(code),
+    })),
+);
+
+const aircraftSearchOptions = computed(() =>
+  [
+    ...new Set(
+      allAircraft.value
+        .map((item) => item.nombre)
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b)),
+);
+
+const filteredAircraftSearchOptions = computed(() => {
+  const query = normalizeText(searchQuery.value);
+
+  return aircraftSearchOptions.value
+    .filter((option) => !query || normalizeText(option).includes(query));
+});
+
+const filteredAircraft = computed(() => {
+  const query = normalizeText(searchQuery.value);
+  const category = selectedCategory.value;
+  const base = selectedBase.value;
+  const minPassengers = Number(minimumPassengers.value);
+
+  return allAircraft.value.filter((item) => {
+    const matchesQuery =
+      !query ||
+      normalizeText(item.nombre).includes(query) ||
+      normalizeText(item.fabricante).includes(query);
+
+    const matchesCategory = !category || item.categoria === category;
+    const matchesBase = !base || item.base === base;
+    const matchesPassengers =
+      !Number.isFinite(minPassengers) ||
+      minPassengers <= 0 ||
+      Number(item.capacidad_pasajeros || 0) >= minPassengers;
+
+    return matchesQuery && matchesCategory && matchesBase && matchesPassengers;
+  });
+});
+
+const totalCount = computed(() => allAircraft.value.length);
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredAircraft.value.length / pageSize)),
+);
+const paginatedAircraft = computed(() => {
+  const from = (currentPage.value - 1) * pageSize;
+  const to = from + pageSize;
+  return filteredAircraft.value.slice(from, to);
+});
+
 const checkAvailability = async (aircraftId) => {
+  if (!aircraftId) return false;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayISO = today.toISOString();
@@ -283,38 +629,27 @@ const stopAutoSlide = () => {
   }
 };
 
-const loadFleetPage = async (page = 1) => {
-  loadingMore.value = true;
-  aeronaves.value = [];
+const handleAircraftComboboxBlur = () => {
+  window.setTimeout(() => {
+    isAircraftComboboxOpen.value = false;
+  }, 120);
+};
 
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+const selectAircraftSearchOption = (option) => {
+  searchQuery.value = option;
+  isAircraftComboboxOpen.value = false;
+};
+
+const loadFleet = async () => {
+  loadingMore.value = true;
 
   const {
     data: fleetData,
-    count,
     error,
   } = await supabase
-    .from("aircraft_fleet")
-    .select(
-      `
-      id,
-      name,
-      aircraft_type,
-      ideal_use,
-      descripcion,
-      capacity_passengers,
-      cruise_speed_knots,
-      rental_price_usd,
-      is_active,
-      aeronave_imagenes!fk_aircraft (
-        imagen_url
-      )
-    `,
-      { count: "exact" },
-    )
-    .eq("is_active", true)
-    .range(from, to);
+    .from(AIRCRAFT_TABLE)
+    .select("*")
+    .eq("is_active", true);
 
   if (error) {
     console.error("ERROR FLEET:", error);
@@ -322,32 +657,64 @@ const loadFleetPage = async (page = 1) => {
     return;
   }
 
-  totalCount.value = count;
-  totalPages.value = Math.ceil(count / pageSize);
+  const mappedAircraft = await Promise.all(
+    (fleetData || []).map(async (item) => {
+      const aircraft = {
+        id: item.id,
+        nombre: item.name,
+        fabricante: item.manufacturer || item.engines || "",
+        categoria: item.aircraft_type,
+        base: item.iata,
+        capacidad_pasajeros: item.capacity_passengers,
+        cruise_speed_knots: item.cruise_speed_knots,
+        alcance_horas: item.cruise_speed_knots,
+        alcance_nm: item.range_nm,
+        precio_renta_usd: item.rental_price_usd,
+        descripcion: item.descripcion || item.ideal_use,
+        disponible: await checkAvailability(item.id),
+        imagenes: normalizeImageList(
+          getPrimaryImage(item),
+          item.exterior_images,
+          item.interior_images,
+        ),
+        unavailableDates: [],
+      };
 
-  for (const item of fleetData) {
-    const imagenes =
-      item.aeronave_imagenes?.map((img) => img.imagen_url).filter(Boolean) || [];
+      await loadAvailabilityForAircraft(aircraft);
+      return aircraft;
+    }),
+  );
 
-    aeronaves.value.push({
-      id: item.id,
-      nombre: item.name,
-      categoria: item.aircraft_type,
-      capacidad_pasajeros: item.capacity_passengers,
-      alcance_horas: item.cruise_speed_knots,
-      precio_renta_usd: item.rental_price_usd,
-      descripcion: item.descripcion || item.ideal_use,
-      disponible: item.is_active,
-      imagenes,
-      unavailableDates: [],
-    });
-  }
-
-  for (const aircraft of aeronaves.value) {
-    await loadAvailabilityForAircraft(aircraft);
-  }
+  allAircraft.value = mappedAircraft;
 
   loadingMore.value = false;
+};
+
+const loadAirportLabels = async () => {
+  const [{ data: national }, { data: international }] = await Promise.all([
+    supabase.from("aeropuertos_mexico").select("IATA, CIUDAD, AEROPUERTO"),
+    supabase.from("airports_geo").select("iata, city, name"),
+  ]);
+
+  const nextLabels = {};
+
+  (national || []).forEach((airport) => {
+    const code = String(airport?.IATA || "").trim().toUpperCase();
+    const city = String(airport?.CIUDAD || "").trim();
+    const name = String(airport?.AEROPUERTO || "").trim();
+    if (!code) return;
+    nextLabels[code] = city ? `${city} (${code})` : name ? `${name} (${code})` : `Base ${code}`;
+  });
+
+  (international || []).forEach((airport) => {
+    const code = String(airport?.iata || "").trim().toUpperCase();
+    const city = String(airport?.city || "").trim();
+    const name = String(airport?.name || "").trim();
+    if (!code || nextLabels[code]) return;
+    nextLabels[code] = city ? `${city} (${code})` : name ? `${name} (${code})` : `Base ${code}`;
+  });
+
+  airportLabels.value = nextLabels;
 };
 
 const loadAvailabilityForAircraft = async (item) => {
@@ -429,7 +796,6 @@ const changePage = (page) => {
   if (page < 1 || page > totalPages.value) return;
 
   currentPage.value = page;
-  loadFleetPage(page);
 
   window.scrollTo({
     top: 0,
@@ -449,23 +815,19 @@ const goToQuote = (aircraft) => {
 
 onMounted(async () => {
   try {
-    const { data, error } = await supabase
-      .from("aircraft_fleet")
-      .select("*")
-      .eq("is_active", true);
-
-    if (error) throw error;
-
-    aircraftFleet.value = await Promise.all(
-      data.map(async (item) => ({
-        ...item,
-        disponible: await checkAvailability(item.id),
-      })),
-    );
-
-    await loadFleetPage(1);
+    await Promise.all([loadAirportLabels(), loadFleet()]);
   } catch (err) {
     console.error("Error loading fleet:", err);
+  }
+});
+
+watch([searchQuery, selectedCategory, selectedBase, minimumPassengers], () => {
+  currentPage.value = 1;
+});
+
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) {
+    currentPage.value = pages;
   }
 });
 
@@ -625,6 +987,93 @@ onBeforeUnmount(() => stopAutoSlide());
   border-top-color: var(--fleet-blue);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+.fleet-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.fleet-field {
+  display: grid;
+  gap: 8px;
+}
+
+.fleet-combobox {
+  position: relative;
+}
+
+.fleet-field span {
+  color: var(--fleet-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fleet-field input,
+.fleet-field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--fleet-line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--fleet-ink);
+  font: inherit;
+}
+
+.fleet-combobox__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid rgba(7, 17, 31, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 40px rgba(7, 17, 31, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.fleet-combobox__option {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--fleet-ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+.fleet-combobox__option:hover {
+  background: rgba(23, 90, 143, 0.08);
+  color: var(--fleet-blue);
+}
+
+.fleet-results,
+.fleet-empty {
+  margin: 0 0 20px;
+  color: var(--fleet-muted);
+}
+
+.fleet-empty {
+  min-height: 200px;
+  display: grid;
+  place-items: center;
+  border-top: 1px solid var(--fleet-line);
+  border-bottom: 1px solid var(--fleet-line);
 }
 
 .fleet-list {
@@ -1014,6 +1463,10 @@ onBeforeUnmount(() => stopAutoSlide());
     width: 100%;
   }
 
+  .fleet-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .modal-media {
     min-height: 380px;
   }
@@ -1043,6 +1496,10 @@ onBeforeUnmount(() => stopAutoSlide());
   .aircraft-row {
     gap: 20px;
     padding: 22px 0;
+  }
+
+  .fleet-filters {
+    grid-template-columns: 1fr;
   }
 
   .aircraft-media {

@@ -30,9 +30,27 @@ const formatDate = (value = new Date()) => {
 };
 
 const formatMoney = (value = 0) =>
-  `$${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
+  `$${Number(value || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 const formatWholeDays = (value = 0) => Math.max(0, Math.ceil(Number(value || 0)));
+
+const formatHours = (value = 0) => {
+  const hours = Number(value || 0);
+
+  if (!Number.isFinite(hours)) return "0 hrs";
+
+  return `${hours.toFixed(2).replace(/\.?0+$/, "")} hrs`;
+};
+
+const formatHHMM = (value = 0) => {
+  const totalMinutes = Math.round(Number(value || 0));
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return `${hrs}:${String(mins).padStart(2, "0")} hrs`;
+};
 
 const loadImage = (src) =>
   new Promise((resolve) => {
@@ -188,6 +206,7 @@ export const generateReservationPDF = async ({
   form,
   routes,
   breakdowns = [],
+  pricingSummary = null,
   totals,
   getAircraftName,
   getAircraftById,
@@ -202,10 +221,11 @@ export const generateReservationPDF = async ({
     (sum, item) => sum + formatWholeDays(item.nights),
     0,
   );
-  const taxRate = totals.subtotal
-    ? Math.round((totals.iva / totals.subtotal) * 100)
-    : 0;
-  const tripType = taxRate === 4 ? "International Charter" : "National Charter";
+  const tripType = totals.iva > 0 ? "International Charter" : "National Charter";
+  const totalFlightTime = pricingSummary?.totals?.flightTime ?? 0;
+  const totalBillableHours = pricingSummary?.totals?.billableHours ?? 0;
+  const totalFlightTimeMinutes = pricingSummary?.totals?.flightTimeMinutes ?? 0;
+  const totalBillableMinutes = pricingSummary?.totals?.billableMinutes ?? 0;
 
   const logo = await loadImage(`${import.meta.env.BASE_URL}images/logo.png`);
   const secondaryLogo = await loadImage(`${import.meta.env.BASE_URL}images/logoo.png`);
@@ -324,6 +344,7 @@ export const generateReservationPDF = async ({
   routes.forEach((route, index) => {
     const miles = breakdowns[index]?.miles || 0;
     const hours = breakdowns[index]?.hours || 0;
+    const billableHHMM = breakdowns[index]?.billableHHMM || formatHours(hours);
     const fromLabel = route?.positioning
       ? `${route.fromAirport || "-"} (${route.positioningType === "return_to_base" ? "Return to base" : "Repositioning"})`
       : route.fromAirport || "-";
@@ -349,7 +370,7 @@ export const generateReservationPDF = async ({
       y + 7,
       { align: "right" },
     );
-    doc.text(`${Math.round(Number(hours))} hrs`, 182, y + 7, { align: "right" });
+    doc.text(billableHHMM, 182, y + 7, { align: "right" });
 
     doc.setDrawColor(...COLORS.line);
     doc.line(20, y + rowHeight, 190, y + rowHeight);
@@ -368,13 +389,14 @@ export const generateReservationPDF = async ({
       totals.overnight,
     ],
     ["Operational Expenses", totals.expenses],
-    [`Tax (${taxRate}%)`, totals.iva],
+    ["Subtotal", totals.subtotal],
   ];
+  const costBoxHeight = 18 + costRows.length * 7.2 + 6;
 
   doc.setFillColor(...COLORS.panel);
   doc.setDrawColor(...COLORS.line);
   doc.setLineWidth(0.25);
-  doc.roundedRect(20, y, 170, 46, 4, 4, "FD");
+  doc.roundedRect(20, y, 170, costBoxHeight, 4, 4, "FD");
   doc.setFillColor(...COLORS.accentSoft);
   doc.roundedRect(24, y + 5, 162, 10, 2, 2, "F");
   doc.setFont("helvetica", "bold");
@@ -401,7 +423,7 @@ export const generateReservationPDF = async ({
     rowY += 7.2;
   });
 
-  y += 54;
+  y += costBoxHeight + 8;
 
   doc.setFillColor(...COLORS.accentDark);
   doc.roundedRect(20, y, 170, 24, 4, 4, "F");
@@ -414,7 +436,11 @@ export const generateReservationPDF = async ({
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...COLORS.accentSoft);
-  doc.text("Estimated in USD, subject to itinerary confirmation", 26, y + 16);
+  doc.text(
+    `Estimated in USD · Total flight time ${formatHHMM(totalFlightTimeMinutes) || formatHours(totalFlightTime)} · Billable ${formatHHMM(totalBillableMinutes) || formatHours(totalBillableHours)}`,
+    26,
+    y + 16,
+  );
   doc.setFont("helvetica", "bold");
   doc.setFontSize(21);
   doc.setTextColor(...COLORS.white);

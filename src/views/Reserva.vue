@@ -48,10 +48,14 @@
       :form="form"
       :routes="billableRoutes"
       :breakdowns="billableBreakdowns"
+      :pricingSummary="pricingSummary"
       :totalFlightCost="flightCostTotal"
       :totalOvernight="overnightTotal"
       :globalExpenses="operationalExpenses"
+      :otherCharges="otherCharges"
       :subtotal="subtotal"
+      :commercialMargin="commercialMargin"
+      :commercialMarginRate="commercialMarginPercent / 100"
       :iva="iva"
       :totalPrice="totalFinal"
       :isInternational="isInternationalFlight"
@@ -74,6 +78,88 @@ import MainLayout from "@/layouts/MainLayout.vue";
 import ReservationForm from "@/components/reservation/ReservationForm.vue";
 import QuoteModal from "@/components/reservation/QuoteModal.vue";
 import { generateReservationPDF } from "@/utils/pdfGenerator";
+
+const AIRCRAFT_TABLE = "aircraft_fleet";
+const COMMERCIAL_MARGIN_RATE = 0.15;
+const OTHER_CHARGES_DEFAULT = 0;
+const AIRCRAFT_TYPE_BILLING_DEFAULTS = {
+  HELICOPTERO: {
+    minimumBillableMinutesPerLeg: 60,
+    operationalMarginMinutes: 15,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+  },
+  "MONOMOTOR PISTON": {
+    minimumBillableMinutesPerLeg: 60,
+    operationalMarginMinutes: 15,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+  },
+  TURBOHELICE: {
+    minimumBillableMinutesPerLeg: 75,
+    operationalMarginMinutes: 20,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+  },
+  "JET LIGERO (LIGHT JET)": {
+    minimumBillableMinutesPerLeg: 95,
+    operationalMarginMinutes: 30,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+  },
+  "MIDSIZE JET (MID JET)": {
+    minimumBillableMinutesPerLeg: 95,
+    operationalMarginMinutes: 30,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+  },
+  "SUPER MIDSIZE JET": {
+    minimumBillableMinutesPerLeg: 95,
+    operationalMarginMinutes: 30,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+  },
+  "HEAVY JET": {
+    minimumBillableMinutesPerLeg: 95,
+    operationalMarginMinutes: 30,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+  },
+  "REGIONAL JET": {
+    minimumBillableMinutesPerLeg: 95,
+    operationalMarginMinutes: 30,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+  },
+};
+const AIRCRAFT_MODEL_BILLING_OVERRIDES = {
+  "LEAR JET 31": {
+    minimumBillableMinutesPerLeg: 95,
+    operationalMarginMinutes: 30,
+    roundingMinutes: 5,
+    roundingMode: "ceil",
+    applyCommercialMargin: true,
+    commercialMarginPercent: 15,
+    airportFeesUsd: 500,
+    overnightFeeUsd: 0,
+  },
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -134,6 +220,117 @@ const getAircraftRentalRate = (aircraft) =>
       aircraft?.rentalPriceUsd ??
       aircraft?.precio_renta_usd,
   );
+
+const getAircraftBillingDefaults = (aircraft) => {
+  if (!aircraft) {
+    return {
+      minimumBillableMinutesPerLeg: 0,
+      operationalMarginMinutes: 20,
+      roundingMinutes: 5,
+      roundingMode: "ceil",
+      applyCommercialMargin: true,
+      commercialMarginPercent: COMMERCIAL_MARGIN_RATE * 100,
+      airportFeesUsd: 0,
+      overnightFeeUsd: 0,
+      otherChargesUsd: 0,
+    };
+  }
+
+  const normalizedName = String(aircraft.name || "").trim().toUpperCase();
+  const normalizedType = norm(aircraft.aircraft_type || aircraft.type || "");
+  const typeDefaults = AIRCRAFT_TYPE_BILLING_DEFAULTS[normalizedType] || {};
+  const namedDefaults = AIRCRAFT_MODEL_BILLING_OVERRIDES[normalizedName] || {};
+
+  const fallbackMinimumBillableMinutesPerLeg =
+    toNumber(namedDefaults.minimumBillableMinutesPerLeg) ||
+    toNumber(typeDefaults.minimumBillableMinutesPerLeg) ||
+    0;
+  const fallbackRoundingMinutes =
+    toNumber(namedDefaults.roundingMinutes) ||
+    toNumber(typeDefaults.roundingMinutes) ||
+    5;
+  const fallbackOperationalMarginMinutes =
+    toNumber(namedDefaults.operationalMarginMinutes) ||
+    toNumber(typeDefaults.operationalMarginMinutes) ||
+    20;
+  const fallbackRoundingMode =
+    namedDefaults.roundingMode || typeDefaults.roundingMode || "ceil";
+  const fallbackApplyCommercialMargin =
+    namedDefaults.applyCommercialMargin ??
+    typeDefaults.applyCommercialMargin ??
+    true;
+  const fallbackCommercialMarginPercent =
+    toNumber(namedDefaults.commercialMarginPercent) ||
+    toNumber(typeDefaults.commercialMarginPercent) ||
+    COMMERCIAL_MARGIN_RATE * 100;
+  const fallbackAirportFeesUsd =
+    toNumber(namedDefaults.airportFeesUsd) ||
+    toNumber(typeDefaults.airportFeesUsd);
+  const fallbackOvernightFeeUsd =
+    toNumber(namedDefaults.overnightFeeUsd) ||
+    toNumber(typeDefaults.overnightFeeUsd);
+  const fallbackOtherChargesUsd =
+    toNumber(namedDefaults.otherChargesUsd) ||
+    toNumber(typeDefaults.otherChargesUsd);
+
+  return {
+    minimumBillableMinutesPerLeg: toNumber(
+      aircraft?.minimum_billable_minutes_per_leg ??
+        aircraft?.minimumBillableMinutesPerLeg ??
+        aircraft?.minimum_billable_minutes ??
+        aircraft?.minimumBillableMinutes,
+      fallbackMinimumBillableMinutesPerLeg,
+    ),
+    roundingMinutes: toNumber(
+      aircraft?.rounding_minutes ??
+        aircraft?.roundingMinutes ??
+        aircraft?.billable_rounding_minutes ??
+        aircraft?.billableRoundingMinutes,
+      fallbackRoundingMinutes,
+    ),
+    roundingMode:
+      aircraft?.rounding_mode ??
+      aircraft?.roundingMode ??
+      aircraft?.billable_rounding_mode ??
+      aircraft?.billableRoundingMode ??
+      fallbackRoundingMode,
+    operationalMarginMinutes: toNumber(
+      aircraft?.operational_margin_minutes ??
+        aircraft?.operationalMarginMinutes ??
+        aircraft?.margin_minutes ??
+        aircraft?.marginMinutes,
+      fallbackOperationalMarginMinutes,
+    ),
+    applyCommercialMargin:
+      aircraft?.apply_commercial_margin ??
+      aircraft?.applyCommercialMargin ??
+      fallbackApplyCommercialMargin,
+    commercialMarginPercent: toNumber(
+      aircraft?.commercial_margin_percent ??
+        aircraft?.commercialMarginPercent,
+      fallbackCommercialMarginPercent,
+    ),
+    airportFeesUsd: toNumber(
+      aircraft?.airport_fees_usd ??
+        aircraft?.airportFeesUsd ??
+        aircraft?.national_expenses_usd ??
+        aircraft?.international_expenses_usd,
+      fallbackAirportFeesUsd,
+    ),
+    overnightFeeUsd: toNumber(
+      aircraft?.overnight_fee_usd ??
+        aircraft?.overnightFeeUsd ??
+        aircraft?.crew_overnight_usd ??
+        aircraft?.crewOvernightUsd,
+      fallbackOvernightFeeUsd,
+    ),
+    otherChargesUsd: toNumber(
+      aircraft?.other_charges_usd ??
+        aircraft?.otherChargesUsd,
+      fallbackOtherChargesUsd,
+    ),
+  };
+};
 
 const form = reactive({
   name: "",
@@ -379,9 +576,12 @@ const getRouteAirport = (airportName) =>
 
 const getAircraftBaseAirport = (aircraftId) => {
   const aircraft = getAircraftById(aircraftId);
-  if (!aircraft?.home_base) return null;
+  if (!aircraft) return null;
 
-  const iata = norm(aircraft.iata || aircraft.home_base);
+  const baseReference = aircraft.iata || aircraft.home_base || aircraft.base;
+  if (!baseReference) return null;
+
+  const iata = norm(baseReference);
 
   let match = allAirports.value.find(
     (airport) => norm(getAirportOptionValue(airport)) === iata,
@@ -391,8 +591,17 @@ const getAircraftBaseAirport = (aircraftId) => {
 
   match = allAirports.value.find(
     (airport) =>
-      norm(airport.ciudad) === norm(aircraft.ciudad) &&
-      (!aircraft.estado || norm(airport.estado) === norm(aircraft.estado)),
+      norm(airport.aeropuerto) === iata ||
+      norm(airport.ciudad) === iata,
+  );
+
+  if (match) return match;
+
+  match = allAirports.value.find(
+    (airport) =>
+      norm(airport.ciudad) === norm(aircraft.ciudad || aircraft.city) &&
+      (!(aircraft.estado || aircraft.state) ||
+        norm(airport.estado) === norm(aircraft.estado || aircraft.state)),
   );
 
   return match || null;
@@ -423,21 +632,44 @@ const isRouteEndpointAtBase = (routeItem, direction, baseAirport) => {
   return isSameAirportLocation(endpointAirport, baseAirport);
 };
 
+const itineraryStartsAndEndsAtBase = (routeItems, baseAirport) => {
+  if (!routeItems?.length || !baseAirport) return false;
+
+  const firstRoute = routeItems[0];
+  const lastRoute = routeItems[routeItems.length - 1];
+
+  return (
+    isRouteEndpointAtBase(firstRoute, "from", baseAirport) &&
+    isRouteEndpointAtBase(lastRoute, "to", baseAirport)
+  );
+};
+
 const buildPositioningRoute = (
   aircraftId,
   fromAirport,
   toAirport,
   positioningType = "repositioning",
-) => ({
+) => {
+  const resolveAirportCode = (airport) =>
+    typeof airport === "string" ? airport : getAirportOptionValue(airport);
+
+  return {
   aircraft_id: aircraftId,
-  fromAirport,
-  toAirport,
+  fromAirport: resolveAirportCode(fromAirport),
+  fromCity: fromAirport?.ciudad || "",
+  fromState: fromAirport?.estado || "",
+  fromCountry: fromAirport?.country || "",
+  toAirport: resolveAirportCode(toAirport),
+  toCity: toAirport?.ciudad || "",
+  toState: toAirport?.estado || "",
+  toCountry: toAirport?.country || "",
   passengers: 1,
   start_date: "",
   end_date: "",
   positioning: true,
   positioningType,
-});
+  };
+};
 
 const getRouteNights = (routeItem) => {
   if (!routeItem?.start_date || !routeItem?.end_date) return 0;
@@ -490,7 +722,7 @@ onMounted(async () => {
       .select("*");
 
     const { data: fleet } = await supabase
-      .from("aircraft_fleet")
+      .from(AIRCRAFT_TABLE)
       .select("*")
       .eq("is_active", true);
 
@@ -521,6 +753,54 @@ onMounted(() => {
 });
 
 const toRad = (deg) => (deg * Math.PI) / 180;
+
+function minutesToHHMM(minutes) {
+  const totalMinutes = Math.round(minutes);
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return `${hrs}:${String(mins).padStart(2, "0")} hrs`;
+}
+
+function calculateFlightTime({
+  distanceNm,
+  cruiseSpeedKnots,
+  marginMinutes = 0,
+  minimumBillableMinutesPerLeg = 0,
+  roundingMinutes = 5,
+  roundingMode = "ceil",
+}) {
+  const baseMinutes = (distanceNm / cruiseSpeedKnots) * 60;
+
+  let billableMinutes = baseMinutes + marginMinutes;
+
+  if (minimumBillableMinutesPerLeg > 0) {
+    billableMinutes = Math.max(
+      billableMinutes,
+      minimumBillableMinutesPerLeg,
+    );
+  }
+
+  if (roundingMinutes > 0) {
+    const roundedValue = billableMinutes / roundingMinutes;
+
+    if (roundingMode === "floor") {
+      billableMinutes = Math.floor(roundedValue) * roundingMinutes;
+    } else if (roundingMode === "nearest") {
+      billableMinutes = Math.round(roundedValue) * roundingMinutes;
+    } else {
+      billableMinutes = Math.ceil(roundedValue) * roundingMinutes;
+    }
+  }
+
+  return {
+    baseMinutes: Math.round(baseMinutes),
+    billableMinutes: Math.round(billableMinutes),
+    baseDecimalHours: baseMinutes / 60,
+    billableDecimalHours: billableMinutes / 60,
+    baseHHMM: minutesToHHMM(baseMinutes),
+    billableHHMM: minutesToHHMM(billableMinutes),
+  };
+}
 
 const getDistanceNM = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
@@ -559,7 +839,21 @@ const calculatePrice = (routeItem) => {
   const from = findAirportForRoute(routeItem, "from");
   const to = findAirportForRoute(routeItem, "to");
 
-  if (!aircraft || !from || !to) {
+  if (!aircraft) {
+    return {
+      ready: false,
+      reason: "missing_aircraft",
+      flightCost: 0,
+      overnightCost: 0,
+      operationalCost: 0,
+      nights: 0,
+      total: 0,
+      hours: 0,
+      miles: 0,
+    };
+  }
+
+  if (!from || !to) {
     return {
       ready: false,
       reason: "missing_route_data",
@@ -598,9 +892,6 @@ const calculatePrice = (routeItem) => {
   }
 
   const distanceNm = getDistanceNM(fromLat, fromLng, toLat, toLng);
-  const adjustedDistanceNm =
-    distanceNm * (isInternationalFlight.value ? 1.15 : 1.12);
-
   const speed = getAircraftCruiseSpeed(aircraft);
 
   if (!speed || speed <= 0) {
@@ -617,49 +908,51 @@ const calculatePrice = (routeItem) => {
     };
   }
 
-  const airTime = adjustedDistanceNm / speed;
-  const buffer =
-    adjustedDistanceNm < 300
-      ? 0.25
-      : adjustedDistanceNm < 600
-        ? 0.35
-        : adjustedDistanceNm < 1000
-          ? 0.45
-          : 0.5;
-  let hours = Math.ceil((airTime + buffer) * 4) / 4;
-  const minHours = getMinHours(aircraft, adjustedDistanceNm);
+  const billingDefaults = getAircraftBillingDefaults(aircraft);
+  const fallbackMinimumBillableMinutesPerLeg =
+    getMinHours(aircraft, distanceNm) * 60;
+  const minimumBillableMinutesPerLeg =
+    billingDefaults.minimumBillableMinutesPerLeg > 0
+      ? billingDefaults.minimumBillableMinutesPerLeg
+      : fallbackMinimumBillableMinutesPerLeg;
+  const marginMinutes = billingDefaults.operationalMarginMinutes;
+  const flightTime = calculateFlightTime({
+    distanceNm,
+    cruiseSpeedKnots: speed,
+    marginMinutes,
+    minimumBillableMinutesPerLeg,
+    roundingMinutes: billingDefaults.roundingMinutes,
+    roundingMode: billingDefaults.roundingMode,
+  });
+  const airTime = flightTime.baseDecimalHours;
+  const hours = flightTime.billableDecimalHours;
 
-  if (hours < minHours) hours = minHours;
-
-  const flightCost = Number(
-    (hours * getAircraftRentalRate(aircraft)).toFixed(2),
-  );
+  const flightCostRaw = hours * getAircraftRentalRate(aircraft);
+  const flightCost = Number(flightCostRaw.toFixed(2));
   const nights = getRouteNights(routeItem);
-  const crewOvernightUsd = toNumber(
-    aircraft.crew_overnight_usd ?? aircraft.crewOvernightUsd,
-    0,
-  );
-  const overnightRate =
-    crewOvernightUsd > 0
-      ? crewOvernightUsd
-      : getAircraftRentalRate(aircraft) * 0.5;
+  const overnightRate = billingDefaults.overnightFeeUsd;
   const overnightCost = Number((nights * overnightRate).toFixed(2));
-  const operationalCost = toNumber(
-    isInternationalFlight.value
-      ? aircraft.international_expenses_usd
-      : aircraft.national_expenses_usd,
-  );
+  const operationalCost = billingDefaults.airportFeesUsd;
   const total = Number((flightCost + overnightCost).toFixed(2));
 
   return {
     ready: true,
     reason: "",
     flightCost,
+    flightCostRaw,
     overnightCost,
     operationalCost,
     nights,
     total,
+    airTime: Number(airTime.toFixed(4)),
     hours,
+    marginMinutes,
+    minimumBillableMinutesPerLeg,
+    roundingMinutes: billingDefaults.roundingMinutes,
+    baseMinutes: flightTime.baseMinutes,
+    billableMinutes: flightTime.billableMinutes,
+    baseHHMM: flightTime.baseHHMM,
+    billableHHMM: flightTime.billableHHMM,
     miles: Number(distanceNm.toFixed(1)),
   };
 };
@@ -685,20 +978,25 @@ const billableRoutes = computed(() => {
   const lastRoute = validRoutes.value[validRoutes.value.length - 1];
   const aircraftId = firstRoute?.aircraft_id;
   const aircraftBase = getAircraftBaseAirport(aircraftId);
+  const firstRouteOrigin = findAirportForRoute(firstRoute, "from");
+  const lastRouteDestination = findAirportForRoute(lastRoute, "to");
 
-  if (!aircraftBase?.iata) {
+  if (!aircraftBase) {
     return [...validRoutes.value];
   }
 
-  const baseAirport = aircraftBase.iata;
+  if (itineraryStartsAndEndsAtBase(validRoutes.value, aircraftBase)) {
+    return [...validRoutes.value];
+  }
+
   const calculatedRoutes = [];
 
   if (!isRouteEndpointAtBase(firstRoute, "from", aircraftBase)) {
     calculatedRoutes.push(
       buildPositioningRoute(
         aircraftId,
-        baseAirport,
-        firstRoute.fromAirport,
+        aircraftBase,
+        firstRouteOrigin || firstRoute.fromAirport,
         "repositioning",
       ),
     );
@@ -710,8 +1008,8 @@ const billableRoutes = computed(() => {
     calculatedRoutes.push(
       buildPositioningRoute(
         aircraftId,
-        lastRoute.toAirport,
-        baseAirport,
+        lastRouteDestination || lastRoute.toAirport,
+        aircraftBase,
         "return_to_base",
       ),
     );
@@ -724,33 +1022,152 @@ const billableBreakdowns = computed(() =>
   billableRoutes.value.map((routeItem) => calculatePrice(routeItem)),
 );
 
+const summarizeRouteBreakdowns = (routeItems, breakdownItems) =>
+  routeItems.reduce(
+    (summary, routeItem, index) => {
+      const breakdown = breakdownItems[index];
+
+      if (!breakdown?.ready) return summary;
+
+      summary.miles += toNumber(breakdown.miles);
+      summary.flightTime += toNumber(breakdown.airTime);
+      summary.billableHours += toNumber(breakdown.hours);
+      summary.flightTimeMinutes += toNumber(breakdown.baseMinutes);
+      summary.billableMinutes += toNumber(breakdown.billableMinutes);
+      summary.flightCost += toNumber(
+        breakdown.flightCostRaw ?? breakdown.flightCost,
+      );
+
+      if (routeItem?.positioning) {
+        summary.positioningCount += 1;
+      } else {
+        summary.customerCount += 1;
+      }
+
+      return summary;
+    },
+    {
+      miles: 0,
+      flightTime: 0,
+      billableHours: 0,
+      flightTimeMinutes: 0,
+      billableMinutes: 0,
+      flightCost: 0,
+      customerCount: 0,
+      positioningCount: 0,
+    },
+  );
+
+const pricingSummary = computed(() => {
+  const customerRoutes = billableRoutes.value.filter((routeItem) => !routeItem.positioning);
+  const ferryRoutes = billableRoutes.value.filter((routeItem) => routeItem.positioning);
+  const customerBreakdowns = billableBreakdowns.value.filter(
+    (_, index) => !billableRoutes.value[index]?.positioning,
+  );
+  const ferryBreakdowns = billableBreakdowns.value.filter(
+    (_, index) => billableRoutes.value[index]?.positioning,
+  );
+
+  const customer = summarizeRouteBreakdowns(customerRoutes, customerBreakdowns);
+  const ferry = summarizeRouteBreakdowns(ferryRoutes, ferryBreakdowns);
+
+  return {
+    customer: {
+      ...customer,
+      miles: Number(customer.miles.toFixed(1)),
+      flightTime: Number(customer.flightTime.toFixed(2)),
+      billableHours: Number(customer.billableHours.toFixed(2)),
+      flightTimeMinutes: Math.round(customer.flightTimeMinutes),
+      billableMinutes: Math.round(customer.billableMinutes),
+      flightTimeHHMM: minutesToHHMM(customer.flightTimeMinutes),
+      billableHHMM: minutesToHHMM(customer.billableMinutes),
+      flightCost: Number(customer.flightCost.toFixed(2)),
+    },
+    ferry: {
+      ...ferry,
+      miles: Number(ferry.miles.toFixed(1)),
+      flightTime: Number(ferry.flightTime.toFixed(2)),
+      billableHours: Number(ferry.billableHours.toFixed(2)),
+      flightTimeMinutes: Math.round(ferry.flightTimeMinutes),
+      billableMinutes: Math.round(ferry.billableMinutes),
+      flightTimeHHMM: minutesToHHMM(ferry.flightTimeMinutes),
+      billableHHMM: minutesToHHMM(ferry.billableMinutes),
+      flightCost: Number(ferry.flightCost.toFixed(2)),
+    },
+    totals: {
+      miles: Number((customer.miles + ferry.miles).toFixed(1)),
+      flightTime: Number((customer.flightTime + ferry.flightTime).toFixed(2)),
+      billableHours: Number(
+        (customer.billableHours + ferry.billableHours).toFixed(2),
+      ),
+      flightTimeMinutes: Math.round(customer.flightTimeMinutes + ferry.flightTimeMinutes),
+      billableMinutes: Math.round(customer.billableMinutes + ferry.billableMinutes),
+      flightTimeHHMM: minutesToHHMM(customer.flightTimeMinutes + ferry.flightTimeMinutes),
+      billableHHMM: minutesToHHMM(customer.billableMinutes + ferry.billableMinutes),
+      flightCost: Number((customer.flightCost + ferry.flightCost).toFixed(2)),
+    },
+  };
+});
+
 const flightCostTotal = computed(() =>
-  billableBreakdowns.value.reduce((sum, item) => sum + item.flightCost, 0),
+  pricingSummary.value.totals.flightCost,
 );
 
-const overnightTotal = computed(() => priceBreakdowns.value[0]?.overnightCost || 0);
+const overnightTotal = computed(() =>
+  Number(
+    priceBreakdowns.value
+      .reduce(
+        (sum, breakdown) => sum + toNumber(breakdown?.overnightCost),
+        0,
+      )
+      .toFixed(2),
+  ),
+);
+const otherCharges = computed(() => {
+  const aircraft = getAircraftById(routes.value[0]?.aircraft_id);
+  if (!aircraft) return OTHER_CHARGES_DEFAULT;
+
+  return getAircraftBillingDefaults(aircraft).otherChargesUsd;
+});
+
+const applyCommercialMargin = computed(() => {
+  const aircraft = getAircraftById(routes.value[0]?.aircraft_id);
+  return Boolean(getAircraftBillingDefaults(aircraft).applyCommercialMargin);
+});
+
+const commercialMarginPercent = computed(() => {
+  const aircraft = getAircraftById(routes.value[0]?.aircraft_id);
+  return getAircraftBillingDefaults(aircraft).commercialMarginPercent;
+});
 
 const operationalExpenses = computed(() => {
   const aircraft = getAircraftById(routes.value[0]?.aircraft_id);
   if (!aircraft) return 0;
 
-  return toNumber(
-    isInternationalFlight.value
-      ? aircraft.international_expenses_usd
-      : aircraft.national_expenses_usd,
-  );
+  return getAircraftBillingDefaults(aircraft).airportFeesUsd;
 });
 
 const subtotal = computed(
   () =>
-    flightCostTotal.value + overnightTotal.value + operationalExpenses.value,
+    flightCostTotal.value +
+    overnightTotal.value +
+    operationalExpenses.value +
+    otherCharges.value,
 );
 
-const getTaxRate = () => (isInternationalFlight.value ? 0.04 : 0.16);
-
-const iva = computed(() => Number((subtotal.value * getTaxRate()).toFixed(2)));
+const commercialMargin = computed(() =>
+  applyCommercialMargin.value
+    ? Number(
+        (
+          subtotal.value *
+          (commercialMarginPercent.value / 100)
+        ).toFixed(2),
+      )
+    : 0,
+);
+const iva = computed(() => 0);
 const totalFinal = computed(() =>
-  Number((subtotal.value + iva.value).toFixed(2)),
+  Number((subtotal.value + commercialMargin.value).toFixed(2)),
 );
 
 const submitForm = () => {
@@ -766,6 +1183,8 @@ const submitForm = () => {
     const aircraftName =
       getAircraftName(routes.value[0]?.aircraft_id) || "la aeronave seleccionada";
     const reasonMessages = {
+      missing_aircraft:
+        "No se pudo generar la cotización porque la aeronave seleccionada ya no coincide con el catálogo activo.",
       missing_route_data:
         "No se pudo generar la cotización porque falta relacionar un aeropuerto de origen o destino con la ruta seleccionada.",
       missing_airport_coordinates:
@@ -851,8 +1270,9 @@ const handleConfirm = async () => {
     loading.value = true;
     const firstRoute = routes.value[0];
     const aircraftId = getRouteAircraftId(firstRoute);
+    const selectedAircraft = getAircraftById(aircraftId);
 
-    if (!aircraftId) throw new Error(copy.value.noAircraft);
+    if (!aircraftId || !selectedAircraft) throw new Error(copy.value.noAircraft);
 
     const { startISO, endISO } = getReservationBounds(validRoutes.value);
 
@@ -902,7 +1322,7 @@ const handleConfirm = async () => {
       .from("quote_routes")
       .insert(routesPayload);
 
-    if (routesError) throw routesError;
+    if (routesError && routesError.code !== "23503") throw routesError;
 
     const blobToBase64 = (blob) =>
       new Promise((resolve, reject) => {
@@ -917,11 +1337,17 @@ const handleConfirm = async () => {
       form,
       routes: billableRoutes.value,
       breakdowns: billableBreakdowns.value,
+      pricingSummary: pricingSummary.value,
       totals: {
         flight: flightCostTotal.value,
+        customerFlight: pricingSummary.value.customer.flightCost,
+        repositioning: pricingSummary.value.ferry.flightCost,
         overnight: overnightTotal.value,
         expenses: operationalExpenses.value,
+        otherCharges: otherCharges.value,
         subtotal: subtotal.value,
+        commercialMargin: commercialMargin.value,
+        commercialMarginRate: commercialMarginPercent.value / 100,
         iva: iva.value,
         total: totalFinal.value,
       },
@@ -930,6 +1356,26 @@ const handleConfirm = async () => {
     });
 
     const pdfBase64 = await blobToBase64(pdfBlob);
+    const pricingPayload = {
+      customerFlightCost: pricingSummary.value.customer.flightCost,
+      ferryFlightCost: pricingSummary.value.ferry.flightCost,
+      totalMiles: pricingSummary.value.totals.miles,
+      totalFlightTime: pricingSummary.value.totals.flightTime,
+      totalBillableHours: pricingSummary.value.totals.billableHours,
+      flightCost: flightCostTotal.value,
+      repositioningCost: pricingSummary.value.ferry.flightCost,
+      overnightCost: overnightTotal.value,
+      operationalExpenses: operationalExpenses.value,
+      otherCharges: otherCharges.value,
+      subtotal: subtotal.value,
+      commercialMargin: commercialMargin.value,
+      commercialMarginRate: commercialMarginPercent.value / 100,
+      tax: iva.value,
+      iva: iva.value,
+      total: totalFinal.value,
+      totalPrice: totalFinal.value,
+      total_estimated_price: totalFinal.value,
+    };
 
     const res = await fetch(
       "https://redskyg.com/landing/send-email_movil_cliente.php",
@@ -939,11 +1385,23 @@ const handleConfirm = async () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          quoteId,
+          quote_id: quoteId,
           form,
           routes: billableRoutes.value,
+          routeBreakdowns: billableBreakdowns.value,
+          priceBreakdowns: billableBreakdowns.value,
+          pricingSummary: pricingSummary.value,
+          pricing: pricingPayload,
+          totals: pricingPayload,
           subtotal: subtotal.value,
+          commercialMargin: commercialMargin.value,
+          commercialMarginRate: commercialMarginPercent.value / 100,
           iva: iva.value,
+          tax: iva.value,
           total: totalFinal.value,
+          totalPrice: totalFinal.value,
+          total_estimated_price: totalFinal.value,
           pdf: pdfBase64,
         }),
       },

@@ -67,6 +67,11 @@
               <span>{{ t.type }}</span>
               <strong>{{ selectedAircraft.aircraft_type }}</strong>
             </div>
+
+            <div>
+              <span>{{ t.base }}</span>
+              <strong>{{ getAircraftBaseLabel(selectedAircraft) }}</strong>
+            </div>
           </div>
         </div>
 
@@ -80,7 +85,7 @@
           <option value="">{{ t.selectAircraft }}</option>
 
           <option v-for="a in filteredFleet" :key="a.id" :value="a.id">
-            {{ a.name }} - {{ a.capacity_passengers }} pax - Base: {{ a.home_base }}
+            {{ a.name }} - {{ a.capacity_passengers }} pax - {{ t.base }}: {{ getAircraftBaseLabel(a) }}
           </option>
         </select>
       </div>
@@ -650,16 +655,40 @@ const loadReservations = async () => {
 const filteredFleet = computed(() => {
   if (!form.value.flightType) return aircraftFleet.value;
 
+  const normalize = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
   const map = {
-    "Private Jet": "Jet Ejecutivo",
-    Helicopter: "Helicóptero",
-    "Air Ambulance": "Jet Ejecutivo",
-    Cargo: "Turbohélice",
+    "Private Jet": [
+      "jet ligero (light jet)",
+      "midsize jet (mid jet)",
+      "super midsize jet",
+      "heavy jet",
+      "regional jet",
+    ],
+    Helicopter: ["helicoptero"],
+    "Air Ambulance": [
+      "jet ligero (light jet)",
+      "midsize jet (mid jet)",
+      "super midsize jet",
+      "heavy jet",
+      "regional jet",
+      "turbohelice",
+    ],
+    Cargo: ["turbohelice", "regional jet", "monomotor piston"],
   };
 
-  const selectedType = map[form.value.flightType];
+  const selectedTypes = map[form.value.flightType]?.map(normalize) || [];
 
-  return aircraftFleet.value.filter((a) => a.aircraft_type === selectedType);
+  if (!selectedTypes.length) return aircraftFleet.value;
+
+  return aircraftFleet.value.filter((aircraft) =>
+    selectedTypes.includes(normalize(aircraft.aircraft_type)),
+  );
 });
 /* ===============================
    PROPS
@@ -1030,6 +1059,72 @@ const errors = ref({});
 
 const getAirportOptionValue = (airport) =>
   (airport?.iata || airport?.IATA || airport?.aeropuerto || "").trim();
+
+const normalize = (str) =>
+  str
+    ?.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const allKnownAirports = computed(() => {
+  const collected = [];
+
+  states.value.forEach((state) => {
+    const cities = citiesByState.value(state);
+    cities.forEach((city) => {
+      collected.push(...airportsByCity.value(null, state, city));
+    });
+  });
+
+  countries.value.forEach((country) => {
+    const cities = props.citiesByCountry(country);
+    cities.forEach((city) => {
+      collected.push(...airportsByCity.value(country, null, city));
+    });
+  });
+
+  return collected;
+});
+
+const getAircraftBaseLabel = (aircraft) => {
+  if (!aircraft) return "-";
+
+  const baseCode = String(aircraft.iata || aircraft.home_base || "").trim().toUpperCase();
+  const city = String(aircraft.ciudad || "").trim();
+
+  if (city && baseCode) return `${city} (${baseCode})`;
+  if (city) return city;
+
+  const match = allKnownAirports.value.find((airport) => {
+    const airportCode = String(airport?.iata || airport?.IATA || "").trim().toUpperCase();
+    return airportCode && airportCode === baseCode;
+  });
+
+  if (match) {
+    const matchCity = String(match?.ciudad || match?.city || "").trim();
+    if (matchCity && baseCode) return `${matchCity} (${baseCode})`;
+    if (matchCity) return matchCity;
+  }
+
+  if (baseCode) return baseCode;
+
+  const baseName = String(aircraft.home_base || "").trim();
+  if (!baseName) return "-";
+
+  const airportByName = allKnownAirports.value.find(
+    (airport) => normalize(airport?.aeropuerto || airport?.name) === normalize(baseName),
+  );
+
+  if (airportByName) {
+    const airportCity = String(airportByName?.ciudad || airportByName?.city || "").trim();
+    const airportCode = String(airportByName?.iata || airportByName?.IATA || "").trim().toUpperCase();
+    if (airportCity && airportCode) return `${airportCity} (${airportCode})`;
+    if (airportCity) return airportCity;
+  }
+
+  return baseName;
+};
 
 const clearAirportError = (type, index) => {
   delete errors.value[`${type}Airport_${index}`];

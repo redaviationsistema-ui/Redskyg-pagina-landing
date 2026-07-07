@@ -113,7 +113,7 @@
 
                   <div class="quote-metric">
                     <span>{{ t.flightTime }}</span>
-                    <strong>{{ formatHours(breakdowns?.[index]?.hours) }}</strong>
+                    <strong>{{ breakdowns?.[index]?.billableHHMM || formatHours(breakdowns?.[index]?.hours) }}</strong>
                   </div>
 
                   <div class="quote-metric">
@@ -121,16 +121,17 @@
                     <strong>{{ route.passengers || 0 }}</strong>
                   </div>
 
-                  <div class="quote-metric" v-if="breakdowns?.[index]?.nights > 0">
+                  <div class="quote-metric" v-if="getWholeNights(breakdowns?.[index]?.nights) > 0">
                     <span>{{ t.overnight }}</span>
                     <strong>
-                      {{ breakdowns[index].nights }}
-                      {{ breakdowns[index].nights === 1 ? t.night : t.nights }}
+                      {{ getWholeNights(breakdowns?.[index]?.nights) }}
+                      {{ getWholeNights(breakdowns?.[index]?.nights) === 1 ? t.night : t.nights }}
                     </strong>
                   </div>
                 </div>
               </div>
             </section>
+
           </div>
 
           <footer class="quote-modal-footer">
@@ -158,6 +159,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  pricingSummary: {
+    type: Object,
+    default: null,
+  },
   totalFlightCost: {
     type: Number,
     default: 0,
@@ -170,9 +175,21 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  otherCharges: {
+    type: Number,
+    default: 0,
+  },
   subtotal: {
     type: Number,
     default: 0,
+  },
+  commercialMargin: {
+    type: Number,
+    default: 0,
+  },
+  commercialMarginRate: {
+    type: Number,
+    default: 0.15,
   },
   iva: {
     type: Number,
@@ -250,6 +267,19 @@ const t = computed(() =>
         priceExpiresIn: "Valido por",
         continueEditing: "Editar",
         sendQuotation: "Recibir cotizacion",
+        customerFlight: "Vuelo del Cliente",
+        ferryFlight: "Ferry Flight / Reposicionamiento",
+        flightCost: "Costo de vuelo",
+        repositioningCost: "Reposicionamiento",
+        overnightCost: "Pernoctas",
+        operationalExpenses: "Gastos operativos",
+        otherCharges: "Otros cargos",
+        subtotal: "Subtotal",
+        commercialMargin: "Margen comercial",
+        tax: "IVA / Impuesto",
+        billableHours: "facturables",
+        totalTime: "tiempo total",
+        totalEstimated: "Total estimado",
       }
     : {
         executiveFlightQuote: "Executive Flight Quote",
@@ -292,6 +322,19 @@ const t = computed(() =>
         priceExpiresIn: "Valid for",
         continueEditing: "Edit",
         sendQuotation: "Send quotation",
+        customerFlight: "Client Flight",
+        ferryFlight: "Ferry Flight / Repositioning",
+        flightCost: "Flight Cost",
+        repositioningCost: "Repositioning",
+        overnightCost: "Overnights",
+        operationalExpenses: "Operational Expenses",
+        otherCharges: "Other Charges",
+        subtotal: "Subtotal",
+        commercialMargin: "Commercial Margin",
+        tax: "VAT / Tax",
+        billableHours: "billable",
+        totalTime: "total time",
+        totalEstimated: "Estimated total",
       },
 );
 
@@ -338,7 +381,23 @@ const formatNumber = (value) =>
     maximumFractionDigits: 0,
   }).format(Number(value || 0));
 
-const formatHours = (value) => `${Number(value || 0).toFixed(1)} hrs`;
+const formatMoney = (value) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+const formatHours = (value) => {
+  const hours = Number(value || 0);
+
+  if (!Number.isFinite(hours)) return "0 hrs";
+
+  return `${hours.toFixed(2).replace(/\.?0+$/, "")} hrs`;
+};
+
+const getWholeNights = (value) => Math.max(0, Math.ceil(Number(value || 0)));
 
 const getPositioningLabel = (route) =>
   route?.positioningType === "return_to_base"
