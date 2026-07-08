@@ -123,9 +123,35 @@ const sendEmail = async () => {
   errorMsg.value = "";
 
   try {
+    const payload = {
+      name: String(form.value.name || "").trim(),
+      email: String(form.value.email || "").trim(),
+      phone: String(form.value.phone || "").trim(),
+      message: String(form.value.message || "").trim(),
+    };
+
+    if (!payload.name || !payload.email || !payload.phone || !payload.message) {
+      errorMsg.value = props.content.errors.send;
+      return;
+    }
+
+    const jsonPayload = {
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone,
+      service: "Website contact form",
+      message: `Phone: ${payload.phone}\n\n${payload.message}`,
+    };
+
     const response = await axios.post(
       "https://redskyg.com/send-contact.php",
-      form.value,
+      jsonPayload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      },
     );
 
     if (response.data.success) {

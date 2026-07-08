@@ -20,7 +20,7 @@ const content = {
     video: "images/Home/home2.mp4",
     metrics: [
       { value: "24/7", label: "coordinacion de vuelo" },
-      { value: "20+", label: "anos en aviacion" },
+      { value: "20+", label: "años en aviacion" },
       { value: "MX / US", label: "soporte regional" },
     ],
   },
@@ -32,7 +32,7 @@ const content = {
   ],
   why: {
     eyebrow: "Por Que Sky Group",
-    title: "Aviacion privada disenada para velocidad, privacidad y certeza.",
+    title: "Aviacion privada diseñada para velocidad, privacidad y certeza.",
     items: [
       {
         icon: "globe",

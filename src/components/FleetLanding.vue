@@ -312,7 +312,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import {
   ArrowRight,
   Award,
@@ -323,6 +323,7 @@ import {
   Grid3X3,
   Headphones,
   Heart,
+  Helicopter,
   Map,
   Plane,
   ShieldCheck,
@@ -359,41 +360,53 @@ const airportLabels = ref({});
 const isAircraftComboboxOpen = ref(false);
 const workspaceRef = ref(null);
 
+const route = useRoute();
 const router = useRouter();
 const { localizedPath, locale } = useLocalizedNavigation();
 let interval = null;
 
+const CATEGORY_VALUES = {
+  helicopter: "Helicóptero",
+  singleEngine: "Monomotor Pistón",
+  turboprop: "Turbohélice",
+  lightJet: "Jet ligero (Light Jet)",
+  midJet: "Midsize Jet (Mid Jet)",
+  superMidJet: "Super Midsize Jet",
+  heavyJet: "Heavy Jet",
+  regionalJet: "Regional Jet",
+};
+
 const categoryOptions = computed(() => [
   {
-    value: "Helicóptero",
+    value: CATEGORY_VALUES.helicopter,
     label: filterLabels.value.categoryOptions?.helicopter || "Helicóptero · trayectos cortos y acceso flexible",
   },
   {
-    value: "Monomotor Pistón",
+    value: CATEGORY_VALUES.singleEngine,
     label: filterLabels.value.categoryOptions?.singleEngine || "Avión pequeño · opción práctica para pocos pasajeros",
   },
   {
-    value: "Turbohélice",
+    value: CATEGORY_VALUES.turboprop,
     label: filterLabels.value.categoryOptions?.turboprop || "Turbohélice · eficiente para vuelos regionales",
   },
   {
-    value: "Jet ligero (Light Jet)",
+    value: CATEGORY_VALUES.lightJet,
     label: filterLabels.value.categoryOptions?.lightJet || "Jet ligero · rápido para grupos pequeños",
   },
   {
-    value: "Midsize Jet (Mid Jet)",
+    value: CATEGORY_VALUES.midJet,
     label: filterLabels.value.categoryOptions?.midJet || "Jet mediano · más espacio y alcance",
   },
   {
-    value: "Super Midsize Jet",
+    value: CATEGORY_VALUES.superMidJet,
     label: filterLabels.value.categoryOptions?.superMidJet || "Jet grande · más comodidad para viajes largos",
   },
   {
-    value: "Heavy Jet",
+    value: CATEGORY_VALUES.heavyJet,
     label: filterLabels.value.categoryOptions?.heavyJet || "Jet de largo alcance · cabina amplia",
   },
   {
-    value: "Regional Jet",
+    value: CATEGORY_VALUES.regionalJet,
     label: filterLabels.value.categoryOptions?.regionalJet || "Jet regional · capacidad alta para grupos",
   },
 ]);
@@ -437,7 +450,7 @@ const heroCopy = computed(() => {
     allAircraft: "Toda la flota",
     availability: "Disponibilidad",
     aircraftWorldwide: "Aeronaves disponibles",
-    yearsExperience: "Anios de experiencia",
+    yearsExperience: "Años de experiencia",
     certifiedOperator: "Operador certificado",
     globalCoverage: "Cobertura global",
     globalCoverageText: "4,000+ aeropuertos en el mundo",
@@ -497,14 +510,14 @@ const fleetBenefits = computed(() => [
 ]);
 
 const categoryIcons = {
-  "HelicÃ³ptero": Plane,
-  "Monomotor PistÃ³n": Plane,
-  "TurbohÃ©lice": Plane,
-  "Jet ligero (Light Jet)": Plane,
-  "Midsize Jet (Mid Jet)": Plane,
-  "Super Midsize Jet": Plane,
-  "Heavy Jet": Plane,
-  "Regional Jet": Plane,
+  [CATEGORY_VALUES.helicopter]: Helicopter,
+  [CATEGORY_VALUES.singleEngine]: Plane,
+  [CATEGORY_VALUES.turboprop]: Plane,
+  [CATEGORY_VALUES.lightJet]: Plane,
+  [CATEGORY_VALUES.midJet]: Plane,
+  [CATEGORY_VALUES.superMidJet]: Plane,
+  [CATEGORY_VALUES.heavyJet]: Plane,
+  [CATEGORY_VALUES.regionalJet]: Plane,
 };
 
 const categoryFilterOptions = computed(() => [
@@ -516,11 +529,11 @@ const categoryFilterOptions = computed(() => [
   ...categoryOptions.value
     .filter((option) =>
       [
-        "HelicÃ³ptero",
-        "TurbohÃ©lice",
-        "Jet ligero (Light Jet)",
-        "Midsize Jet (Mid Jet)",
-        "Heavy Jet",
+        CATEGORY_VALUES.helicopter,
+        CATEGORY_VALUES.turboprop,
+        CATEGORY_VALUES.lightJet,
+        CATEGORY_VALUES.midJet,
+        CATEGORY_VALUES.heavyJet,
       ].includes(option.value),
     )
     .map((option) => ({
@@ -633,45 +646,83 @@ const normalizeText = (value) =>
     .toLowerCase()
     .trim();
 
+const normalizeAircraftCategory = (value) => {
+  const normalized = normalizeText(value);
+
+  if (!normalized) return "";
+
+  const aliases = {
+    helicoptero: CATEGORY_VALUES.helicopter,
+    helicopter: CATEGORY_VALUES.helicopter,
+    helicopteros: CATEGORY_VALUES.helicopter,
+    helicoptro: CATEGORY_VALUES.helicopter,
+    "helicopteros helicoptero": CATEGORY_VALUES.helicopter,
+    "monomotor piston": CATEGORY_VALUES.singleEngine,
+    "single engine piston": CATEGORY_VALUES.singleEngine,
+    "single-engine piston": CATEGORY_VALUES.singleEngine,
+    turbohelice: CATEGORY_VALUES.turboprop,
+    turbohelices: CATEGORY_VALUES.turboprop,
+    turboprop: CATEGORY_VALUES.turboprop,
+    "jet ligero": CATEGORY_VALUES.lightJet,
+    "light-jet": CATEGORY_VALUES.lightJet,
+    "light jets": CATEGORY_VALUES.lightJet,
+    "light jet": CATEGORY_VALUES.lightJet,
+    "jet ligero light jet": CATEGORY_VALUES.lightJet,
+    "midsize jet": CATEGORY_VALUES.midJet,
+    "mid-jet": CATEGORY_VALUES.midJet,
+    "mid jets": CATEGORY_VALUES.midJet,
+    "mid jet": CATEGORY_VALUES.midJet,
+    "midsize jet mid jet": CATEGORY_VALUES.midJet,
+    "super-mid-jet": CATEGORY_VALUES.superMidJet,
+    "super midsize jet": CATEGORY_VALUES.superMidJet,
+    "heavy-jet": CATEGORY_VALUES.heavyJet,
+    "heavy jet": CATEGORY_VALUES.heavyJet,
+    "regional-jet": CATEGORY_VALUES.regionalJet,
+    "regional jet": CATEGORY_VALUES.regionalJet,
+  };
+
+  return aliases[normalized] || String(value || "").trim();
+};
+
 const isEnglish = computed(() => locale.value === "en-us");
 
 const aircraftCategoryLabels = {
-  "Helicóptero": {
+  [CATEGORY_VALUES.helicopter]: {
     "es-mx": "Helicóptero",
     "en-us": "Helicopter",
   },
-  "Monomotor Pistón": {
+  [CATEGORY_VALUES.singleEngine]: {
     "es-mx": "Monomotor Pistón",
     "en-us": "Single-Engine Piston",
   },
-  Turbohélice: {
+  [CATEGORY_VALUES.turboprop]: {
     "es-mx": "Turbohélice",
     "en-us": "Turboprop",
   },
-  "Jet ligero (Light Jet)": {
+  [CATEGORY_VALUES.lightJet]: {
     "es-mx": "Jet ligero (Light Jet)",
     "en-us": "Light Jet",
   },
-  "Midsize Jet (Mid Jet)": {
+  [CATEGORY_VALUES.midJet]: {
     "es-mx": "Midsize Jet (Mid Jet)",
     "en-us": "Midsize Jet",
   },
-  "Super Midsize Jet": {
+  [CATEGORY_VALUES.superMidJet]: {
     "es-mx": "Super Midsize Jet",
     "en-us": "Super Midsize Jet",
   },
-  "Heavy Jet": {
+  [CATEGORY_VALUES.heavyJet]: {
     "es-mx": "Heavy Jet",
     "en-us": "Heavy Jet",
   },
-  "Regional Jet": {
+  [CATEGORY_VALUES.regionalJet]: {
     "es-mx": "Regional Jet",
     "en-us": "Regional Jet",
   },
 };
 
 const getAircraftCategoryLabel = (item) => {
-  const category = String(item?.categoria || "").trim();
+  const category = normalizeAircraftCategory(item?.categoria);
   if (!category) return "";
 
   const localizedCategory = aircraftCategoryLabels[category]?.[locale.value];
@@ -743,7 +794,8 @@ const filteredAircraft = computed(() => {
       normalizeText(item.nombre).includes(query) ||
       normalizeText(item.fabricante).includes(query);
 
-    const matchesCategory = !category || item.categoria === category;
+    const matchesCategory =
+      !category || normalizeAircraftCategory(item.categoria) === category;
     const matchesBase =
       !base || String(item.base || "").trim().toUpperCase() === base;
     const matchesPassengers =
@@ -813,6 +865,14 @@ const formatCurrency = (value) =>
 
 const setCategoryFilter = (value) => {
   selectedCategory.value = value;
+};
+
+const syncCategoryFromRoute = () => {
+  const routeCategory = Array.isArray(route.query.category)
+    ? route.query.category[0]
+    : route.query.category;
+
+  selectedCategory.value = normalizeAircraftCategory(routeCategory);
 };
 
 const setCapacityFilter = (value) => {
@@ -915,7 +975,7 @@ const loadFleet = async () => {
         id: item.id,
         nombre: item.name,
         fabricante: item.manufacturer || item.engines || "",
-        categoria: item.aircraft_type,
+        categoria: normalizeAircraftCategory(item.aircraft_type),
         base: item.iata,
         capacidad_pasajeros: item.capacity_passengers,
         cruise_speed_knots: item.cruise_speed_knots,
@@ -1066,6 +1126,8 @@ const goToQuote = (aircraft) => {
 };
 
 onMounted(async () => {
+  syncCategoryFromRoute();
+
   try {
     await Promise.all([loadAirportLabels(), loadFleet()]);
   } catch (err) {
@@ -1075,6 +1137,10 @@ onMounted(async () => {
 
 watch([searchQuery, selectedCategory, selectedBase, minimumPassengers, selectedSort], () => {
   currentPage.value = 1;
+});
+
+watch(() => route.query.category, () => {
+  syncCategoryFromRoute();
 });
 
 watch(totalPages, (pages) => {

@@ -75,70 +75,6 @@
         </div>
       </section>
 
-      <section class="section narrative">
-        <div class="shell narrative-grid">
-          <div class="section-copy reveal">
-            <span class="eyebrow">{{ content.why.eyebrow }}</span>
-            <h2>{{ content.why.title }}</h2>
-          </div>
-
-          <div class="feature-list">
-            <article
-              v-for="item in content.why.items"
-              :key="item.title"
-              class="feature-row reveal"
-            >
-              <component :is="iconFor(item.icon)" class="feature-icon" aria-hidden="true" />
-              <div>
-                <h3>{{ item.title }}</h3>
-                <p>{{ item.description }}</p>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="section experience">
-        <div class="experience-media reveal">
-          <img
-            :src="assetUrl(content.experience.image)"
-            :alt="content.experience.alt"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
-
-        <div class="shell experience-copy reveal">
-          <span class="eyebrow eyebrow--light">{{ content.experience.eyebrow }}</span>
-          <h2>{{ content.experience.title }}</h2>
-          <p>{{ content.experience.description }}</p>
-        </div>
-      </section>
-
-      <section class="section flow">
-        <div class="shell">
-          <div class="section-copy section-copy--center reveal">
-            <span class="eyebrow">{{ content.flow.eyebrow }}</span>
-            <h2>{{ content.flow.title }}</h2>
-            <p>{{ content.flow.description }}</p>
-          </div>
-
-          <div class="flow-steps">
-            <article
-              v-for="(item, index) in content.flow.steps"
-              :key="item.title"
-              class="flow-step reveal"
-            >
-              <span class="step-number">0{{ index + 1 }}</span>
-              <div>
-                <h3>{{ item.title }}</h3>
-                <p>{{ item.description }}</p>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
       <section class="section fleet-preview">
         <div class="fleet-sky" aria-hidden="true">
           <span class="sky-cloud sky-cloud--one"></span>
@@ -216,7 +152,7 @@
                 </div>
               </dl>
 
-              <RouterLink class="fleet-card-link" :to="localizedPath('fleet')">
+              <RouterLink class="fleet-card-link" :to="fleetRouteFor(item)">
                 {{ item.cta || content.fleet.modelCta || "Ver modelos" }}
                 <ArrowRight aria-hidden="true" />
               </RouterLink>
@@ -230,6 +166,70 @@
               <span>{{ content.fleet.assurance?.description }}</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="section flow">
+        <div class="shell">
+          <div class="section-copy section-copy--center reveal">
+            <span class="eyebrow">{{ content.flow.eyebrow }}</span>
+            <h2>{{ content.flow.title }}</h2>
+            <p>{{ content.flow.description }}</p>
+          </div>
+
+          <div class="flow-steps">
+            <article
+              v-for="(item, index) in content.flow.steps"
+              :key="item.title"
+              class="flow-step reveal"
+            >
+              <span class="step-number">0{{ index + 1 }}</span>
+              <div>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section narrative">
+        <div class="shell narrative-grid">
+          <div class="section-copy reveal">
+            <span class="eyebrow">{{ content.why.eyebrow }}</span>
+            <h2>{{ content.why.title }}</h2>
+          </div>
+
+          <div class="feature-list">
+            <article
+              v-for="item in content.why.items"
+              :key="item.title"
+              class="feature-row reveal"
+            >
+              <component :is="iconFor(item.icon)" class="feature-icon" aria-hidden="true" />
+              <div>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section experience">
+        <div class="experience-media reveal">
+          <img
+            :src="assetUrl(content.experience.image)"
+            :alt="content.experience.alt"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+
+        <div class="shell experience-copy reveal">
+          <span class="eyebrow eyebrow--light">{{ content.experience.eyebrow }}</span>
+          <h2>{{ content.experience.title }}</h2>
+          <p>{{ content.experience.description }}</p>
         </div>
       </section>
 
@@ -344,6 +344,15 @@ const fleetIconMap = {
   heavy: Plane,
 };
 
+const fleetCategoryQueryMap = {
+  helicopter: "helicopter",
+  turboprop: "turboprop",
+  light: "light-jet",
+  mid: "mid-jet",
+  super: "super-mid-jet",
+  heavy: "heavy-jet",
+};
+
 const statIconMap = {
   passengers: UsersRound,
   range: MapPin,
@@ -352,6 +361,12 @@ const statIconMap = {
 
 const fleetIconFor = (name) => fleetIconMap[name] ?? Plane;
 const statIconFor = (name) => statIconMap[name] ?? Gauge;
+const fleetRouteFor = (item) => ({
+  path: localizedPath("fleet"),
+  query: item?.icon
+    ? { category: fleetCategoryQueryMap[item.icon] || item.icon }
+    : {},
+});
 
 const filteredFleetItems = computed(() => {
   const items = props.content.fleet.items || [];
