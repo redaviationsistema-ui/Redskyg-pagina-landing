@@ -223,9 +223,7 @@ export const generateReservationPDF = async ({
   );
   const tripType = totals.iva > 0 ? "International Charter" : "National Charter";
   const totalFlightTime = pricingSummary?.totals?.flightTime ?? 0;
-  const totalBillableHours = pricingSummary?.totals?.billableHours ?? 0;
   const totalFlightTimeMinutes = pricingSummary?.totals?.flightTimeMinutes ?? 0;
-  const totalBillableMinutes = pricingSummary?.totals?.billableMinutes ?? 0;
 
   const logo = await loadImage(`${import.meta.env.BASE_URL}images/logo.png`);
   const secondaryLogo = await loadImage(`${import.meta.env.BASE_URL}images/logoo.png`);
@@ -344,7 +342,7 @@ export const generateReservationPDF = async ({
   routes.forEach((route, index) => {
     const miles = breakdowns[index]?.miles || 0;
     const hours = breakdowns[index]?.hours || 0;
-    const billableHHMM = breakdowns[index]?.billableHHMM || formatHours(hours);
+    const estimatedHHMM = breakdowns[index]?.estimatedHHMM || formatHours(hours);
     const fromLabel = route?.positioning
       ? `${route.fromAirport || "-"} (${route.positioningType === "return_to_base" ? "Return to base" : "Repositioning"})`
       : route.fromAirport || "-";
@@ -370,7 +368,7 @@ export const generateReservationPDF = async ({
       y + 7,
       { align: "right" },
     );
-    doc.text(billableHHMM, 182, y + 7, { align: "right" });
+    doc.text(estimatedHHMM, 182, y + 7, { align: "right" });
 
     doc.setDrawColor(...COLORS.line);
     doc.line(20, y + rowHeight, 190, y + rowHeight);
@@ -437,7 +435,7 @@ export const generateReservationPDF = async ({
   doc.setFontSize(7.5);
   doc.setTextColor(...COLORS.accentSoft);
   doc.text(
-    `Estimated in USD · Total flight time ${formatHHMM(totalFlightTimeMinutes) || formatHours(totalFlightTime)} · Billable ${formatHHMM(totalBillableMinutes) || formatHours(totalBillableHours)}`,
+    `Estimated in USD - Estimated flight time ${formatHHMM(totalFlightTimeMinutes) || formatHours(totalFlightTime)}`,
     26,
     y + 16,
   );

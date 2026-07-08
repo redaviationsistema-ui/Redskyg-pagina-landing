@@ -140,23 +140,57 @@
       </section>
 
       <section class="section fleet-preview">
-        <div class="shell fleet-grid">
-          <div class="section-copy reveal">
-            <span class="eyebrow">{{ content.fleet.eyebrow }}</span>
-            <h2>{{ content.fleet.title }}</h2>
-            <p>{{ content.fleet.description }}</p>
+        <div class="fleet-sky" aria-hidden="true">
+          <span class="sky-cloud sky-cloud--one"></span>
+          <span class="sky-cloud sky-cloud--two"></span>
+          <span class="sky-cloud sky-cloud--three"></span>
+          <span class="flight-path flight-path--one"></span>
+          <span class="flight-path flight-path--two"></span>
+          <span class="flying-aircraft flying-aircraft--one"></span>
+          <span class="flying-aircraft flying-aircraft--two"></span>
+        </div>
 
-            <RouterLink class="text-link" :to="localizedPath('fleet')">
-              {{ content.fleet.cta }}
-              <ArrowRight aria-hidden="true" />
-            </RouterLink>
+        <div class="shell fleet-grid">
+          <div class="fleet-head reveal">
+            <div class="fleet-copy">
+              <span class="eyebrow">{{ content.fleet.eyebrow }}</span>
+              <h2>{{ content.fleet.title }}</h2>
+              <p>{{ content.fleet.description }}</p>
+
+              <RouterLink class="text-link" :to="localizedPath('fleet')">
+                {{ content.fleet.cta }}
+                <ArrowRight aria-hidden="true" />
+              </RouterLink>
+            </div>
+
+            <div class="fleet-filters" aria-label="Fleet categories">
+              <button
+                class="fleet-filter"
+                :class="{ active: activeFleetFilter === 'all' }"
+                type="button"
+                @click="activeFleetFilter = 'all'"
+              >
+                {{ content.fleet.allLabel || "Todas" }}
+              </button>
+              <button
+                v-for="item in content.fleet.items"
+                :key="`filter-${item.name}`"
+                class="fleet-filter"
+                :class="{ active: activeFleetFilter === item.name }"
+                type="button"
+                @click="activeFleetFilter = item.name"
+              >
+                <component :is="fleetIconFor(item.icon)" aria-hidden="true" />
+                <span>{{ item.name }}</span>
+              </button>
+            </div>
           </div>
 
           <div class="fleet-strip reveal">
-            <figure
-              v-for="item in content.fleet.items"
+            <article
+              v-for="item in filteredFleetItems"
               :key="item.name"
-              class="fleet-item"
+              class="fleet-card"
             >
               <img
                 :src="assetUrl(item.image)"
@@ -164,11 +198,37 @@
                 loading="lazy"
                 decoding="async"
               />
-              <figcaption>
-                <strong>{{ item.name }}</strong>
-                <span>{{ item.meta }}</span>
-              </figcaption>
-            </figure>
+              <div class="fleet-card-body">
+                <span class="fleet-card-icon">
+                  <component :is="fleetIconFor(item.icon)" aria-hidden="true" />
+                </span>
+                <div>
+                  <h3>{{ item.name }}</h3>
+                  <p>{{ item.meta }}</p>
+                </div>
+              </div>
+
+              <dl class="fleet-stats">
+                <div v-for="stat in item.stats" :key="stat.label">
+                  <component :is="statIconFor(stat.icon)" aria-hidden="true" />
+                  <dt>{{ stat.value }}</dt>
+                  <dd>{{ stat.label }}</dd>
+                </div>
+              </dl>
+
+              <RouterLink class="fleet-card-link" :to="localizedPath('fleet')">
+                {{ item.cta || content.fleet.modelCta || "Ver modelos" }}
+                <ArrowRight aria-hidden="true" />
+              </RouterLink>
+            </article>
+          </div>
+
+          <div class="fleet-assurance reveal">
+            <ShieldCheck aria-hidden="true" />
+            <div>
+              <strong>{{ content.fleet.assurance?.title }}</strong>
+              <span>{{ content.fleet.assurance?.description }}</span>
+            </div>
           </div>
         </div>
       </section>
@@ -223,25 +283,30 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import {
   ArrowRight,
   CalendarCheck,
   CheckCircle2,
   Clock3,
+  Gauge,
   Globe2,
   Handshake,
+  Helicopter,
+  MapPin,
   MessageCircle,
+  Plane,
   PlaneTakeoff,
   Route,
   ShieldCheck,
   Sparkles,
+  UsersRound,
 } from "lucide-vue-next";
 import MainLayout from "../layouts/MainLayout.vue";
 import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
 
-defineProps({
+const props = defineProps({
   content: {
     type: Object,
     required: true,
@@ -254,6 +319,7 @@ const heroVideo = ref(null);
 const enableHeroVideo = ref(false);
 const scrollProgress = ref(0);
 const heroParallax = ref(0);
+const activeFleetFilter = ref("all");
 
 const iconMap = {
   clock: Clock3,
@@ -268,6 +334,30 @@ const assetUrl = (path = "") =>
   `${import.meta.env.BASE_URL}${String(path).replace(/^\/+/, "")}`;
 
 const iconFor = (name) => iconMap[name] ?? Sparkles;
+
+const fleetIconMap = {
+  helicopter: Helicopter,
+  turboprop: Plane,
+  light: Plane,
+  mid: Plane,
+  super: Plane,
+  heavy: Plane,
+};
+
+const statIconMap = {
+  passengers: UsersRound,
+  range: MapPin,
+  speed: Gauge,
+};
+
+const fleetIconFor = (name) => fleetIconMap[name] ?? Plane;
+const statIconFor = (name) => statIconMap[name] ?? Gauge;
+
+const filteredFleetItems = computed(() => {
+  const items = props.content.fleet.items || [];
+  if (activeFleetFilter.value === "all") return items;
+  return items.filter((item) => item.name === activeFleetFilter.value);
+});
 
 const goToReservation = () => {
   router.push(localizedPath("reserva"));
@@ -731,7 +821,226 @@ onBeforeUnmount(() => {
 }
 
 .fleet-preview {
-  background: var(--paper);
+  position: relative;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.92), transparent 24%),
+    radial-gradient(circle at 82% 34%, rgba(45, 156, 219, 0.16), transparent 30%),
+    linear-gradient(90deg, rgba(11, 18, 32, 0.028) 1px, transparent 1px),
+    linear-gradient(180deg, #f8fcff 0%, #eaf5fc 48%, #dcecf6 100%);
+  background-size: 72px 100%, 100% 100%;
+  overflow: hidden;
+}
+
+.fleet-preview::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(11, 18, 32, 0.14), transparent);
+}
+
+.fleet-preview::after {
+  content: "";
+  position: absolute;
+  right: -12vw;
+  bottom: -34%;
+  width: 48vw;
+  height: 48vw;
+  background: radial-gradient(circle, rgba(45, 156, 219, 0.18), transparent 66%);
+  pointer-events: none;
+}
+
+.fleet-sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sky-cloud {
+  position: absolute;
+  width: 34vw;
+  height: 10vw;
+  min-width: 300px;
+  min-height: 90px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 18% 48%, rgba(255, 255, 255, 0.78) 0 22%, transparent 23%),
+    radial-gradient(circle at 38% 38%, rgba(255, 255, 255, 0.72) 0 28%, transparent 29%),
+    radial-gradient(circle at 62% 48%, rgba(255, 255, 255, 0.68) 0 24%, transparent 25%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.48), transparent);
+  filter: blur(16px);
+  opacity: 0.55;
+  transform: translate3d(-20vw, 0, 0);
+  animation: cloudDrift 42s linear infinite;
+}
+
+.sky-cloud--one {
+  top: 18%;
+  left: -18%;
+}
+
+.sky-cloud--two {
+  top: 48%;
+  left: -36%;
+  width: 28vw;
+  opacity: 0.42;
+  animation-duration: 55s;
+  animation-delay: -18s;
+}
+
+.sky-cloud--three {
+  top: 76%;
+  left: -24%;
+  width: 40vw;
+  opacity: 0.36;
+  animation-duration: 68s;
+  animation-delay: -32s;
+}
+
+.flight-path {
+  position: absolute;
+  left: -18%;
+  width: 54vw;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(23, 90, 143, 0.34), transparent);
+  opacity: 0.58;
+  transform: rotate(-10deg);
+  animation: flightPathDrift 13s linear infinite;
+}
+
+.flight-path--one {
+  top: 36%;
+}
+
+.flight-path--two {
+  top: 70%;
+  width: 42vw;
+  opacity: 0.38;
+  animation-duration: 17s;
+  animation-delay: -8s;
+}
+
+.flying-aircraft {
+  position: absolute;
+  left: -120px;
+  width: 82px;
+  height: 28px;
+  opacity: 0.24;
+  filter: blur(0.1px);
+  transform: translate3d(-120px, 0, 0) rotate(-8deg);
+  animation: aircraftFly 14s linear infinite;
+}
+
+.flying-aircraft::before {
+  content: "";
+  position: absolute;
+  inset: 10px 5px 10px 0;
+  border-radius: 999px 65% 65% 999px;
+  background: linear-gradient(90deg, rgba(11, 18, 32, 0.28), rgba(23, 90, 143, 0.5));
+}
+
+.flying-aircraft::after {
+  content: "";
+  position: absolute;
+  left: 26px;
+  top: 1px;
+  width: 38px;
+  height: 26px;
+  background: rgba(23, 90, 143, 0.42);
+  clip-path: polygon(0 48%, 100% 0, 76% 48%, 100% 100%);
+}
+
+.flying-aircraft--one {
+  top: 28%;
+}
+
+.flying-aircraft--two {
+  top: 62%;
+  width: 64px;
+  opacity: 0.18;
+  animation-duration: 19s;
+  animation-delay: -13s;
+}
+
+.fleet-grid {
+  position: relative;
+  z-index: 1;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: clamp(44px, 5vw, 72px);
+}
+
+.fleet-head {
+  position: static;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(28px, 5vw, 72px);
+  padding-top: 0;
+}
+
+.fleet-copy h2 {
+  max-width: 620px;
+  margin: 0.55rem 0 0.85rem;
+  font-size: clamp(2.25rem, 4.2vw, 4.45rem);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+}
+
+.fleet-copy p {
+  max-width: 470px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.fleet-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 16px;
+}
+
+.fleet-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1px solid rgba(23, 90, 143, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--blue);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 26px rgba(23, 90, 143, 0.06);
+  transition:
+    background 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    color 0.22s ease,
+    transform 0.22s ease;
+}
+
+.fleet-filter svg {
+  width: 15px;
+  height: 15px;
+}
+
+.fleet-filter:hover,
+.fleet-filter.active {
+  transform: translateY(-2px);
+  border-color: rgba(23, 90, 143, 0.36);
+  background: var(--blue);
+  color: #ffffff;
+  box-shadow: 0 14px 30px rgba(23, 90, 143, 0.18);
 }
 
 .text-link {
@@ -751,35 +1060,199 @@ onBeforeUnmount(() => {
 .fleet-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 18px;
+  padding-top: 4px;
 }
 
-.fleet-item {
+.fleet-card {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  padding: 20px 20px 18px;
+  border: 1px solid rgba(23, 90, 143, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 60px rgba(17, 44, 71, 0.08);
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
+}
+
+.fleet-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(23, 90, 143, 0.2);
+  box-shadow: 0 30px 72px rgba(17, 44, 71, 0.14);
+}
+
+.fleet-card img {
+  width: 100%;
+  aspect-ratio: 16 / 8.8;
+  object-fit: contain;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  filter: drop-shadow(0 22px 18px rgba(23, 90, 143, 0.18));
+  transform: translateY(0) scale(1.08);
+  animation: fleetFloat 4.8s ease-in-out infinite;
+  transition:
+    filter 0.28s ease,
+    transform 0.28s ease;
+}
+
+.fleet-card:nth-child(2n) img {
+  transform: translateY(5px) scale(1.08);
+  animation-delay: -1.4s;
+}
+
+.fleet-card:nth-child(3n) img {
+  transform: translateY(-4px) scale(1.1);
+  animation-delay: -2.8s;
+}
+
+.fleet-card:nth-child(4n) img {
+  animation-delay: -4.2s;
+}
+
+.fleet-card:nth-child(5n) img {
+  animation-delay: -5.1s;
+}
+
+.fleet-card:hover img {
+  filter: drop-shadow(0 30px 24px rgba(23, 90, 143, 0.24));
+  transform: translateY(-10px) scale(1.16);
+  animation-play-state: paused;
+}
+
+.fleet-card-body {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.fleet-card-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(23, 90, 143, 0.22);
+}
+
+.fleet-card-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.fleet-card h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+}
+
+.fleet-card p {
+  margin: 0.24rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.fleet-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0 0;
+}
+
+.fleet-stats div {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: 7px;
+  align-items: center;
   min-width: 0;
 }
 
-.fleet-item img {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: contain;
-  background: linear-gradient(180deg, #ffffff, #edf2f7);
-  border: 1px solid rgba(11, 18, 32, 0.08);
+.fleet-stats svg {
+  grid-row: span 2;
+  width: 16px;
+  height: 16px;
+  color: var(--blue);
 }
 
-.fleet-item figcaption {
-  display: grid;
-  gap: 0.28rem;
-  padding-top: 14px;
-}
-
-.fleet-item strong {
+.fleet-stats dt {
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1.1;
 }
 
-.fleet-item span {
+.fleet-stats dd {
+  margin: 0;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.66rem;
+  line-height: 1.2;
+}
+
+.fleet-card-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 18px;
+  color: var(--blue);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.fleet-card-link svg {
+  width: 15px;
+  height: 15px;
+}
+
+.fleet-assurance {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 2px;
+  color: var(--ink);
+  text-align: left;
+}
+
+.fleet-assurance > svg {
+  width: 44px;
+  height: 44px;
+  color: var(--blue);
+  flex: 0 0 auto;
+}
+
+.fleet-assurance strong,
+.fleet-assurance span {
+  display: block;
+}
+
+.fleet-assurance strong {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.fleet-assurance span {
+  margin-top: 0.18rem;
+  color: var(--muted);
+  font-size: 0.84rem;
 }
 
 .trust {
@@ -871,6 +1344,51 @@ onBeforeUnmount(() => {
   transform: translateY(0);
 }
 
+@keyframes aircraftFly {
+  0% {
+    transform: translate3d(-160px, 42px, 0) rotate(-8deg) scale(0.88);
+  }
+
+  48% {
+    opacity: 0.28;
+  }
+
+  100% {
+    transform: translate3d(calc(100vw + 220px), -96px, 0) rotate(-8deg) scale(1.08);
+  }
+}
+
+@keyframes flightPathDrift {
+  0% {
+    transform: translateX(-10vw) rotate(-10deg);
+  }
+
+  100% {
+    transform: translateX(128vw) rotate(-10deg);
+  }
+}
+
+@keyframes cloudDrift {
+  0% {
+    transform: translate3d(-22vw, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(140vw, -18px, 0);
+  }
+}
+
+@keyframes fleetFloat {
+  0%,
+  100% {
+    translate: -4px 0;
+  }
+
+  50% {
+    translate: 10px -20px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -884,6 +1402,13 @@ onBeforeUnmount(() => {
   .reveal {
     opacity: 1;
     transform: none;
+  }
+
+  .flight-path,
+  .flying-aircraft,
+  .sky-cloud,
+  .fleet-card img {
+    animation: none;
   }
 }
 
@@ -918,6 +1443,19 @@ onBeforeUnmount(() => {
 
   .final-actions {
     justify-content: flex-start;
+  }
+
+  .fleet-head {
+    grid-template-columns: 1fr;
+  }
+
+  .fleet-filters {
+    justify-content: flex-start;
+    padding-top: 0;
+  }
+
+  .fleet-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -982,6 +1520,22 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .fleet-filters {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    margin-inline: -16px;
+    padding: 0 16px 8px;
+    scrollbar-width: none;
+  }
+
+  .fleet-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fleet-filter {
+    flex: 0 0 auto;
+  }
+
   .signal-item {
     min-height: 74px;
   }
@@ -999,8 +1553,22 @@ onBeforeUnmount(() => {
     padding: 92px 0 70px;
   }
 
-  .fleet-item img {
+  .fleet-card {
+    padding: 18px;
+  }
+
+  .fleet-card img {
     aspect-ratio: 16 / 10;
+    padding: 0;
+  }
+
+  .fleet-stats {
+    gap: 8px;
+  }
+
+  .fleet-assurance {
+    align-items: flex-start;
+    justify-content: flex-start;
   }
 
   .trust-mark {

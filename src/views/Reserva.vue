@@ -46,8 +46,8 @@
     <QuoteModal
       v-if="showQuoteModal"
       :form="form"
-      :routes="billableRoutes"
-      :breakdowns="billableBreakdowns"
+      :routes="pricedRoutes"
+      :breakdowns="pricedBreakdowns"
       :pricingSummary="pricingSummary"
       :totalFlightCost="flightCostTotal"
       :totalOvernight="overnightTotal"
@@ -82,78 +82,50 @@ import { generateReservationPDF } from "@/utils/pdfGenerator";
 const AIRCRAFT_TABLE = "aircraft_fleet";
 const COMMERCIAL_MARGIN_RATE = 0.15;
 const OTHER_CHARGES_DEFAULT = 0;
-const AIRCRAFT_TYPE_BILLING_DEFAULTS = {
+const AIRCRAFT_TYPE_OPERATIONAL_MARGINS = {
   HELICOPTERO: {
-    minimumBillableMinutesPerLeg: 60,
     operationalMarginMinutes: 15,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
   },
   "MONOMOTOR PISTON": {
-    minimumBillableMinutesPerLeg: 60,
     operationalMarginMinutes: 15,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
   },
   TURBOHELICE: {
-    minimumBillableMinutesPerLeg: 75,
     operationalMarginMinutes: 20,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
   },
   "JET LIGERO (LIGHT JET)": {
-    minimumBillableMinutesPerLeg: 95,
     operationalMarginMinutes: 30,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
   },
   "MIDSIZE JET (MID JET)": {
-    minimumBillableMinutesPerLeg: 95,
     operationalMarginMinutes: 30,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
   },
   "SUPER MIDSIZE JET": {
-    minimumBillableMinutesPerLeg: 95,
-    operationalMarginMinutes: 30,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
+    operationalMarginMinutes: 35,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
   },
   "HEAVY JET": {
-    minimumBillableMinutesPerLeg: 95,
-    operationalMarginMinutes: 30,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
+    operationalMarginMinutes: 40,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
   },
   "REGIONAL JET": {
-    minimumBillableMinutesPerLeg: 95,
-    operationalMarginMinutes: 30,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
+    operationalMarginMinutes: 40,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
   },
 };
-const AIRCRAFT_MODEL_BILLING_OVERRIDES = {
+const AIRCRAFT_MODEL_PRICING_OVERRIDES = {
   "LEAR JET 31": {
-    minimumBillableMinutesPerLeg: 95,
-    operationalMarginMinutes: 30,
-    roundingMinutes: 5,
-    roundingMode: "ceil",
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
     airportFeesUsd: 500,
@@ -221,13 +193,10 @@ const getAircraftRentalRate = (aircraft) =>
       aircraft?.precio_renta_usd,
   );
 
-const getAircraftBillingDefaults = (aircraft) => {
+const getAircraftPricingDefaults = (aircraft) => {
   if (!aircraft) {
     return {
-      minimumBillableMinutesPerLeg: 0,
       operationalMarginMinutes: 20,
-      roundingMinutes: 5,
-      roundingMode: "ceil",
       applyCommercialMargin: true,
       commercialMarginPercent: COMMERCIAL_MARGIN_RATE * 100,
       airportFeesUsd: 0,
@@ -238,23 +207,13 @@ const getAircraftBillingDefaults = (aircraft) => {
 
   const normalizedName = String(aircraft.name || "").trim().toUpperCase();
   const normalizedType = norm(aircraft.aircraft_type || aircraft.type || "");
-  const typeDefaults = AIRCRAFT_TYPE_BILLING_DEFAULTS[normalizedType] || {};
-  const namedDefaults = AIRCRAFT_MODEL_BILLING_OVERRIDES[normalizedName] || {};
+  const typeDefaults =
+    AIRCRAFT_TYPE_OPERATIONAL_MARGINS[normalizedType] ||
+    getOperationalRuleByAircraftType(aircraft.aircraft_type || aircraft.type || "");
+  const namedDefaults = AIRCRAFT_MODEL_PRICING_OVERRIDES[normalizedName] || {};
 
-  const fallbackMinimumBillableMinutesPerLeg =
-    toNumber(namedDefaults.minimumBillableMinutesPerLeg) ||
-    toNumber(typeDefaults.minimumBillableMinutesPerLeg) ||
-    0;
-  const fallbackRoundingMinutes =
-    toNumber(namedDefaults.roundingMinutes) ||
-    toNumber(typeDefaults.roundingMinutes) ||
-    5;
   const fallbackOperationalMarginMinutes =
-    toNumber(namedDefaults.operationalMarginMinutes) ||
-    toNumber(typeDefaults.operationalMarginMinutes) ||
-    20;
-  const fallbackRoundingMode =
-    namedDefaults.roundingMode || typeDefaults.roundingMode || "ceil";
+    toNumber(typeDefaults.operationalMarginMinutes) || 30;
   const fallbackApplyCommercialMargin =
     namedDefaults.applyCommercialMargin ??
     typeDefaults.applyCommercialMargin ??
@@ -274,33 +233,7 @@ const getAircraftBillingDefaults = (aircraft) => {
     toNumber(typeDefaults.otherChargesUsd);
 
   return {
-    minimumBillableMinutesPerLeg: toNumber(
-      aircraft?.minimum_billable_minutes_per_leg ??
-        aircraft?.minimumBillableMinutesPerLeg ??
-        aircraft?.minimum_billable_minutes ??
-        aircraft?.minimumBillableMinutes,
-      fallbackMinimumBillableMinutesPerLeg,
-    ),
-    roundingMinutes: toNumber(
-      aircraft?.rounding_minutes ??
-        aircraft?.roundingMinutes ??
-        aircraft?.billable_rounding_minutes ??
-        aircraft?.billableRoundingMinutes,
-      fallbackRoundingMinutes,
-    ),
-    roundingMode:
-      aircraft?.rounding_mode ??
-      aircraft?.roundingMode ??
-      aircraft?.billable_rounding_mode ??
-      aircraft?.billableRoundingMode ??
-      fallbackRoundingMode,
-    operationalMarginMinutes: toNumber(
-      aircraft?.operational_margin_minutes ??
-        aircraft?.operationalMarginMinutes ??
-        aircraft?.margin_minutes ??
-        aircraft?.marginMinutes,
-      fallbackOperationalMarginMinutes,
-    ),
+    operationalMarginMinutes: fallbackOperationalMarginMinutes,
     applyCommercialMargin:
       aircraft?.apply_commercial_margin ??
       aircraft?.applyCommercialMargin ??
@@ -761,44 +694,84 @@ function minutesToHHMM(minutes) {
   return `${hrs}:${String(mins).padStart(2, "0")} hrs`;
 }
 
-function calculateFlightTime({
-  distanceNm,
-  cruiseSpeedKnots,
-  marginMinutes = 0,
-  minimumBillableMinutesPerLeg = 0,
-  roundingMinutes = 5,
-  roundingMode = "ceil",
-}) {
-  const baseMinutes = (distanceNm / cruiseSpeedKnots) * 60;
+function formatoHoras(minutos) {
+  const totalMinutes = Math.round(minutos);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
 
-  let billableMinutes = baseMinutes + marginMinutes;
+  if (m === 0) return `${h}:00 hrs`;
+  return `${h}:${String(m).padStart(2, "0")} hrs`;
+}
 
-  if (minimumBillableMinutesPerLeg > 0) {
-    billableMinutes = Math.max(
-      billableMinutes,
-      minimumBillableMinutesPerLeg,
-    );
+const getOperationalRuleByAircraftType = (aircraftType) => {
+  const normalizedType = norm(aircraftType);
+
+  if (AIRCRAFT_TYPE_OPERATIONAL_MARGINS[normalizedType]) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS[normalizedType];
   }
 
-  if (roundingMinutes > 0) {
-    const roundedValue = billableMinutes / roundingMinutes;
+  if (normalizedType.includes("HELIC")) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS.HELICOPTERO;
+  }
 
-    if (roundingMode === "floor") {
-      billableMinutes = Math.floor(roundedValue) * roundingMinutes;
-    } else if (roundingMode === "nearest") {
-      billableMinutes = Math.round(roundedValue) * roundingMinutes;
-    } else {
-      billableMinutes = Math.ceil(roundedValue) * roundingMinutes;
-    }
+  if (normalizedType.includes("MONOMOTOR") || normalizedType.includes("PISTON")) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS["MONOMOTOR PISTON"];
+  }
+
+  if (normalizedType.includes("TURBOH")) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS.TURBOHELICE;
+  }
+
+  if (normalizedType.includes("LIGHT JET") || normalizedType.includes("JET LIGERO")) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS["JET LIGERO (LIGHT JET)"];
+  }
+
+  if (normalizedType.includes("MIDSIZE JET") || normalizedType.includes("MID JET")) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS["MIDSIZE JET (MID JET)"];
+  }
+
+  if (normalizedType.includes("SUPER MIDSIZE")) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS["SUPER MIDSIZE JET"];
+  }
+
+  if (normalizedType.includes("HEAVY")) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS["HEAVY JET"];
+  }
+
+  if (normalizedType.includes("REGIONAL")) {
+    return AIRCRAFT_TYPE_OPERATIONAL_MARGINS["REGIONAL JET"];
   }
 
   return {
-    baseMinutes: Math.round(baseMinutes),
-    billableMinutes: Math.round(billableMinutes),
-    baseDecimalHours: baseMinutes / 60,
-    billableDecimalHours: billableMinutes / 60,
-    baseHHMM: minutesToHHMM(baseMinutes),
-    billableHHMM: minutesToHHMM(billableMinutes),
+    operationalMarginMinutes: 30,
+  };
+};
+
+function calcularTiempoVuelo({
+  distanciaNm,
+  velocidadKnots,
+  aircraftType,
+  margenOperativoMin = null,
+}) {
+  const reglaBase = getOperationalRuleByAircraftType(aircraftType);
+  const margenMin = toNumber(margenOperativoMin, reglaBase.operationalMarginMinutes);
+  const tiempoRealMin = (distanciaNm / velocidadKnots) * 60;
+  const tiempoEstimadoMin = tiempoRealMin + margenMin;
+  const minutosEstimados = Math.ceil(tiempoEstimadoMin);
+
+  return {
+    tiempoRealMin: Math.ceil(tiempoRealMin),
+    tiempoEstimadoMin: minutosEstimados,
+    minutosEstimados,
+    horasEstimadas: minutosEstimados / 60,
+    tiempoMostrar: formatoHoras(minutosEstimados),
+    margenOperativoMin: margenMin,
+    baseMinutes: Math.ceil(tiempoRealMin),
+    estimatedMinutes: minutosEstimados,
+    baseDecimalHours: tiempoRealMin / 60,
+    estimatedDecimalHours: minutosEstimados / 60,
+    baseHHMM: formatoHoras(Math.ceil(tiempoRealMin)),
+    estimatedHHMM: formatoHoras(minutosEstimados),
   };
 }
 
@@ -812,26 +785,6 @@ const getDistanceNM = (lat1, lon1, lat2, lon2) => {
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
 
   return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) / 1.852;
-};
-
-const getMinHours = (aircraft, distanceNm) => {
-  const configuredMinimum = toNumber(
-    aircraft?.minimum_hours ?? aircraft?.minimumHours,
-    0,
-  );
-
-  if (configuredMinimum > 0) return configuredMinimum;
-
-  const speed = getAircraftCruiseSpeed(aircraft);
-
-  if (distanceNm < 150) return 0.6;
-  if (distanceNm < 300) return 0.75;
-  if (distanceNm < 500) return 1.0;
-  if (speed < 200) return 1.5;
-  if (speed < 300) return 1.25;
-  if (speed < 450) return 1.0;
-  if (speed < 600) return 1.25;
-  return 1.5;
 };
 
 const calculatePrice = (routeItem) => {
@@ -908,31 +861,22 @@ const calculatePrice = (routeItem) => {
     };
   }
 
-  const billingDefaults = getAircraftBillingDefaults(aircraft);
-  const fallbackMinimumBillableMinutesPerLeg =
-    getMinHours(aircraft, distanceNm) * 60;
-  const minimumBillableMinutesPerLeg =
-    billingDefaults.minimumBillableMinutesPerLeg > 0
-      ? billingDefaults.minimumBillableMinutesPerLeg
-      : fallbackMinimumBillableMinutesPerLeg;
-  const marginMinutes = billingDefaults.operationalMarginMinutes;
-  const flightTime = calculateFlightTime({
-    distanceNm,
-    cruiseSpeedKnots: speed,
-    marginMinutes,
-    minimumBillableMinutesPerLeg,
-    roundingMinutes: billingDefaults.roundingMinutes,
-    roundingMode: billingDefaults.roundingMode,
+  const pricingDefaults = getAircraftPricingDefaults(aircraft);
+  const flightTime = calcularTiempoVuelo({
+    distanciaNm: distanceNm,
+    velocidadKnots: speed,
+    aircraftType: aircraft.aircraft_type || aircraft.type,
+    margenOperativoMin: pricingDefaults.operationalMarginMinutes,
   });
   const airTime = flightTime.baseDecimalHours;
-  const hours = flightTime.billableDecimalHours;
+  const hours = flightTime.estimatedDecimalHours;
 
   const flightCostRaw = hours * getAircraftRentalRate(aircraft);
   const flightCost = Number(flightCostRaw.toFixed(2));
   const nights = getRouteNights(routeItem);
-  const overnightRate = billingDefaults.overnightFeeUsd;
+  const overnightRate = pricingDefaults.overnightFeeUsd;
   const overnightCost = Number((nights * overnightRate).toFixed(2));
-  const operationalCost = billingDefaults.airportFeesUsd;
+  const operationalCost = pricingDefaults.airportFeesUsd;
   const total = Number((flightCost + overnightCost).toFixed(2));
 
   return {
@@ -946,13 +890,11 @@ const calculatePrice = (routeItem) => {
     total,
     airTime: Number(airTime.toFixed(4)),
     hours,
-    marginMinutes,
-    minimumBillableMinutesPerLeg,
-    roundingMinutes: billingDefaults.roundingMinutes,
+    marginMinutes: flightTime.margenOperativoMin,
     baseMinutes: flightTime.baseMinutes,
-    billableMinutes: flightTime.billableMinutes,
+    estimatedMinutes: flightTime.estimatedMinutes,
     baseHHMM: flightTime.baseHHMM,
-    billableHHMM: flightTime.billableHHMM,
+    estimatedHHMM: flightTime.estimatedHHMM,
     miles: Number(distanceNm.toFixed(1)),
   };
 };
@@ -971,7 +913,7 @@ const priceBreakdowns = computed(() =>
   validRoutes.value.map((routeItem) => calculatePrice(routeItem)),
 );
 
-const billableRoutes = computed(() => {
+const pricedRoutes = computed(() => {
   if (!validRoutes.value.length) return [];
 
   const firstRoute = validRoutes.value[0];
@@ -1018,8 +960,8 @@ const billableRoutes = computed(() => {
   return calculatedRoutes;
 });
 
-const billableBreakdowns = computed(() =>
-  billableRoutes.value.map((routeItem) => calculatePrice(routeItem)),
+const pricedBreakdowns = computed(() =>
+  pricedRoutes.value.map((routeItem) => calculatePrice(routeItem)),
 );
 
 const summarizeRouteBreakdowns = (routeItems, breakdownItems) =>
@@ -1031,9 +973,9 @@ const summarizeRouteBreakdowns = (routeItems, breakdownItems) =>
 
       summary.miles += toNumber(breakdown.miles);
       summary.flightTime += toNumber(breakdown.airTime);
-      summary.billableHours += toNumber(breakdown.hours);
+      summary.estimatedHours += toNumber(breakdown.hours);
       summary.flightTimeMinutes += toNumber(breakdown.baseMinutes);
-      summary.billableMinutes += toNumber(breakdown.billableMinutes);
+      summary.estimatedMinutes += toNumber(breakdown.estimatedMinutes);
       summary.flightCost += toNumber(
         breakdown.flightCostRaw ?? breakdown.flightCost,
       );
@@ -1049,9 +991,9 @@ const summarizeRouteBreakdowns = (routeItems, breakdownItems) =>
     {
       miles: 0,
       flightTime: 0,
-      billableHours: 0,
+      estimatedHours: 0,
       flightTimeMinutes: 0,
-      billableMinutes: 0,
+      estimatedMinutes: 0,
       flightCost: 0,
       customerCount: 0,
       positioningCount: 0,
@@ -1059,13 +1001,13 @@ const summarizeRouteBreakdowns = (routeItems, breakdownItems) =>
   );
 
 const pricingSummary = computed(() => {
-  const customerRoutes = billableRoutes.value.filter((routeItem) => !routeItem.positioning);
-  const ferryRoutes = billableRoutes.value.filter((routeItem) => routeItem.positioning);
-  const customerBreakdowns = billableBreakdowns.value.filter(
-    (_, index) => !billableRoutes.value[index]?.positioning,
+  const customerRoutes = pricedRoutes.value.filter((routeItem) => !routeItem.positioning);
+  const ferryRoutes = pricedRoutes.value.filter((routeItem) => routeItem.positioning);
+  const customerBreakdowns = pricedBreakdowns.value.filter(
+    (_, index) => !pricedRoutes.value[index]?.positioning,
   );
-  const ferryBreakdowns = billableBreakdowns.value.filter(
-    (_, index) => billableRoutes.value[index]?.positioning,
+  const ferryBreakdowns = pricedBreakdowns.value.filter(
+    (_, index) => pricedRoutes.value[index]?.positioning,
   );
 
   const customer = summarizeRouteBreakdowns(customerRoutes, customerBreakdowns);
@@ -1076,34 +1018,34 @@ const pricingSummary = computed(() => {
       ...customer,
       miles: Number(customer.miles.toFixed(1)),
       flightTime: Number(customer.flightTime.toFixed(2)),
-      billableHours: Number(customer.billableHours.toFixed(2)),
+      estimatedHours: Number(customer.estimatedHours.toFixed(2)),
       flightTimeMinutes: Math.round(customer.flightTimeMinutes),
-      billableMinutes: Math.round(customer.billableMinutes),
+      estimatedMinutes: Math.round(customer.estimatedMinutes),
       flightTimeHHMM: minutesToHHMM(customer.flightTimeMinutes),
-      billableHHMM: minutesToHHMM(customer.billableMinutes),
+      estimatedHHMM: minutesToHHMM(customer.estimatedMinutes),
       flightCost: Number(customer.flightCost.toFixed(2)),
     },
     ferry: {
       ...ferry,
       miles: Number(ferry.miles.toFixed(1)),
       flightTime: Number(ferry.flightTime.toFixed(2)),
-      billableHours: Number(ferry.billableHours.toFixed(2)),
+      estimatedHours: Number(ferry.estimatedHours.toFixed(2)),
       flightTimeMinutes: Math.round(ferry.flightTimeMinutes),
-      billableMinutes: Math.round(ferry.billableMinutes),
+      estimatedMinutes: Math.round(ferry.estimatedMinutes),
       flightTimeHHMM: minutesToHHMM(ferry.flightTimeMinutes),
-      billableHHMM: minutesToHHMM(ferry.billableMinutes),
+      estimatedHHMM: minutesToHHMM(ferry.estimatedMinutes),
       flightCost: Number(ferry.flightCost.toFixed(2)),
     },
     totals: {
       miles: Number((customer.miles + ferry.miles).toFixed(1)),
       flightTime: Number((customer.flightTime + ferry.flightTime).toFixed(2)),
-      billableHours: Number(
-        (customer.billableHours + ferry.billableHours).toFixed(2),
+      estimatedHours: Number(
+        (customer.estimatedHours + ferry.estimatedHours).toFixed(2),
       ),
       flightTimeMinutes: Math.round(customer.flightTimeMinutes + ferry.flightTimeMinutes),
-      billableMinutes: Math.round(customer.billableMinutes + ferry.billableMinutes),
+      estimatedMinutes: Math.round(customer.estimatedMinutes + ferry.estimatedMinutes),
       flightTimeHHMM: minutesToHHMM(customer.flightTimeMinutes + ferry.flightTimeMinutes),
-      billableHHMM: minutesToHHMM(customer.billableMinutes + ferry.billableMinutes),
+      estimatedHHMM: minutesToHHMM(customer.estimatedMinutes + ferry.estimatedMinutes),
       flightCost: Number((customer.flightCost + ferry.flightCost).toFixed(2)),
     },
   };
@@ -1127,24 +1069,24 @@ const otherCharges = computed(() => {
   const aircraft = getAircraftById(routes.value[0]?.aircraft_id);
   if (!aircraft) return OTHER_CHARGES_DEFAULT;
 
-  return getAircraftBillingDefaults(aircraft).otherChargesUsd;
+  return getAircraftPricingDefaults(aircraft).otherChargesUsd;
 });
 
 const applyCommercialMargin = computed(() => {
   const aircraft = getAircraftById(routes.value[0]?.aircraft_id);
-  return Boolean(getAircraftBillingDefaults(aircraft).applyCommercialMargin);
+  return Boolean(getAircraftPricingDefaults(aircraft).applyCommercialMargin);
 });
 
 const commercialMarginPercent = computed(() => {
   const aircraft = getAircraftById(routes.value[0]?.aircraft_id);
-  return getAircraftBillingDefaults(aircraft).commercialMarginPercent;
+  return getAircraftPricingDefaults(aircraft).commercialMarginPercent;
 });
 
 const operationalExpenses = computed(() => {
   const aircraft = getAircraftById(routes.value[0]?.aircraft_id);
   if (!aircraft) return 0;
 
-  return getAircraftBillingDefaults(aircraft).airportFeesUsd;
+  return getAircraftPricingDefaults(aircraft).airportFeesUsd;
 });
 
 const subtotal = computed(
@@ -1177,7 +1119,7 @@ const submitForm = () => {
     return;
   }
 
-  const invalidBreakdown = billableBreakdowns.value.find((item) => !item.ready);
+  const invalidBreakdown = pricedBreakdowns.value.find((item) => !item.ready);
 
   if (invalidBreakdown) {
     const aircraftName =
@@ -1335,8 +1277,8 @@ const handleConfirm = async () => {
 
     const pdfBlob = await generateReservationPDF({
       form,
-      routes: billableRoutes.value,
-      breakdowns: billableBreakdowns.value,
+      routes: pricedRoutes.value,
+      breakdowns: pricedBreakdowns.value,
       pricingSummary: pricingSummary.value,
       totals: {
         flight: flightCostTotal.value,
@@ -1361,7 +1303,7 @@ const handleConfirm = async () => {
       ferryFlightCost: pricingSummary.value.ferry.flightCost,
       totalMiles: pricingSummary.value.totals.miles,
       totalFlightTime: pricingSummary.value.totals.flightTime,
-      totalBillableHours: pricingSummary.value.totals.billableHours,
+      totalEstimatedHours: pricingSummary.value.totals.estimatedHours,
       flightCost: flightCostTotal.value,
       repositioningCost: pricingSummary.value.ferry.flightCost,
       overnightCost: overnightTotal.value,
@@ -1388,9 +1330,9 @@ const handleConfirm = async () => {
           quoteId,
           quote_id: quoteId,
           form,
-          routes: billableRoutes.value,
-          routeBreakdowns: billableBreakdowns.value,
-          priceBreakdowns: billableBreakdowns.value,
+          routes: pricedRoutes.value,
+          routeBreakdowns: pricedBreakdowns.value,
+          priceBreakdowns: pricedBreakdowns.value,
           pricingSummary: pricingSummary.value,
           pricing: pricingPayload,
           totals: pricingPayload,

@@ -15,10 +15,30 @@
           </span>
           <h1>{{ content.hero.title }}</h1>
           <p>{{ content.hero.subtitle }}</p>
+
+          <div class="fleet-hero__actions">
+            <button class="fleet-button fleet-button--gold" type="button" @click="scrollToFleet">
+              {{ heroCopy.explore }}
+              <ArrowRight aria-hidden="true" />
+            </button>
+            <button class="fleet-button fleet-button--ghost" type="button" @click="goToQuoteRequest">
+              {{ content.actions.quote }}
+            </button>
+          </div>
+
+          <div class="fleet-hero__stats" aria-label="Fleet highlights">
+            <div v-for="stat in featuredStats" :key="stat.label" class="fleet-stat">
+              <component :is="stat.icon" aria-hidden="true" />
+              <div>
+                <strong>{{ stat.value }}</strong>
+                <span>{{ stat.label }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="fleet-workspace">
+      <section ref="workspaceRef" class="fleet-workspace">
         <div class="fleet-shell">
           <div class="fleet-intro">
             <div>
@@ -39,73 +59,46 @@
           </div>
 
           <div v-else>
-            <div class="fleet-filters">
-              <label class="fleet-field">
-                <span>{{ filterLabels.search }}</span>
-                <div class="fleet-combobox">
-                  <input
-                    v-model.trim="searchQuery"
-                    type="search"
-                    :placeholder="filterLabels.searchPlaceholder"
-                    @focus="isAircraftComboboxOpen = true"
-                    @blur="handleAircraftComboboxBlur"
-                  />
+            <div class="fleet-toolbar" aria-label="Fleet filters">
+              <div class="fleet-tabs">
+                <button
+                  v-for="option in categoryFilterOptions"
+                  :key="option.value || 'all'"
+                  type="button"
+                  class="fleet-tab"
+                  :class="{ active: selectedCategory === option.value }"
+                  @click="setCategoryFilter(option.value)"
+                >
+                  <component :is="option.icon" aria-hidden="true" />
+                  <span>{{ option.label }}</span>
+                </button>
+              </div>
 
-                  <div
-                    v-if="isAircraftComboboxOpen && filteredAircraftSearchOptions.length"
-                    class="fleet-combobox__menu"
-                  >
-                    <button
-                      v-for="option in filteredAircraftSearchOptions"
-                      :key="option"
-                      type="button"
-                      class="fleet-combobox__option"
-                      @mousedown.prevent="selectAircraftSearchOption(option)"
-                    >
-                      {{ option }}
-                    </button>
-                  </div>
-                </div>
-              </label>
-
-              <label class="fleet-field">
-                <span>{{ filterLabels.category }}</span>
-                <select v-model="selectedCategory">
-                  <option value="">{{ filterLabels.allCategories }}</option>
-                  <option
-                    v-for="option in categoryOptions"
+              <div class="fleet-toolbar__row">
+                <div class="fleet-chip-group" aria-label="Capacity filters">
+                  <button
+                    v-for="option in capacityFilterOptions"
                     :key="option.value"
-                    :value="option.value"
+                    type="button"
+                    class="fleet-chip"
+                    :class="{ active: capacityFilter === option.value }"
+                    @click="setCapacityFilter(option.value)"
                   >
+                    <Users aria-hidden="true" />
                     {{ option.label }}
-                  </option>
-                </select>
-              </label>
+                  </button>
+                </div>
 
-              <label class="fleet-field">
-                <span>{{ filterLabels.base }}</span>
-                <select v-model="selectedBase">
-                  <option value="">{{ filterLabels.allBases }}</option>
-                  <option
-                    v-for="base in baseOptions"
-                    :key="base.value"
-                    :value="base.value"
-                  >
-                    {{ base.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label class="fleet-field">
-                <span>{{ filterLabels.passengers }}</span>
-                <input
-                  v-model.number="minimumPassengers"
-                  type="number"
-                  min="0"
-                  step="1"
-                  :placeholder="filterLabels.passengersPlaceholder"
-                />
-              </label>
+                <label class="fleet-sort">
+                  <span>{{ heroCopy.sortBy }}</span>
+                  <select v-model="selectedSort">
+                    <option value="popular">{{ heroCopy.popular }}</option>
+                    <option value="priceAsc">{{ heroCopy.lowestRate }}</option>
+                    <option value="capacityDesc">{{ heroCopy.capacity }}</option>
+                    <option value="rangeDesc">{{ heroCopy.range }}</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
             <p class="fleet-results">
@@ -147,12 +140,23 @@
 
                 <div class="aircraft-specs">
                   <span>
+                    <Users aria-hidden="true" />
                     <strong>{{ item.capacidad_pasajeros }}</strong>
                     {{ content.specs.passengers }}
                   </span>
                   <span>
-                    <strong>{{ item.alcance_horas }}</strong>
-                    {{ content.specs.range }}
+                    <Gauge aria-hidden="true" />
+                    <strong>{{ item.cruise_speed_knots || item.alcance_horas || "-" }}</strong>
+                    kts
+                  </span>
+                  <span>
+                    <Map aria-hidden="true" />
+                    <strong>{{ item.alcance_nm || "-" }}</strong>
+                    NM
+                  </span>
+                  <span>
+                    <Briefcase aria-hidden="true" />
+                    {{ isEnglish ? "Baggage" : "Equipaje" }}
                   </span>
                   <span
                     :class="
@@ -161,6 +165,7 @@
                         : 'aircraft-status aircraft-status--unavailable'
                     "
                   >
+                    <BadgeCheck aria-hidden="true" />
                     {{
                       item.disponible
                         ? content.status.available
@@ -171,19 +176,22 @@
               </div>
 
               <aside class="aircraft-action" @click.stop>
+                <button class="aircraft-favorite" type="button" aria-label="Save aircraft">
+                  <Heart aria-hidden="true" />
+                </button>
+
                 <div class="aircraft-price">
-                  <span>{{ content.specs.rate }}</span>
-                  <strong>${{ item.precio_renta_usd }} / {{ content.specs.hour }}</strong>
+                  <span>{{ heroCopy.from }}</span>
+                  <strong>{{ formatCurrency(item.precio_renta_usd) }}<small> / {{ content.specs.hour }}</small></strong>
+                  <em>{{ heroCopy.estimatedTotal }}</em>
                 </div>
 
-                <VCalendar
-                  :attributes="getCalendarAttributes(item)"
-                  :min-date="new Date()"
-                  :disabled="true"
-                  class="fleet-calendar"
-                />
+                <button class="quote-button quote-button--dark" type="button" @click="openModal(item)">
+                  {{ content.actions.view }}
+                  <ArrowRight aria-hidden="true" />
+                </button>
 
-                <button class="quote-button" type="button" @click="goToQuote(item)">
+                <button class="quote-button quote-button--outline" type="button" @click="goToQuote(item)">
                   {{ content.actions.quote }}
                 </button>
               </aside>
@@ -212,6 +220,18 @@
             >
               {{ content.pagination.next }}
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="fleet-benefits" aria-label="Fleet benefits">
+        <div class="fleet-shell fleet-benefits__grid">
+          <div v-for="benefit in fleetBenefits" :key="benefit.title" class="fleet-benefit">
+            <component :is="benefit.icon" aria-hidden="true" />
+            <div>
+              <strong>{{ benefit.title }}</strong>
+              <span>{{ benefit.text }}</span>
+            </div>
           </div>
         </div>
       </section>
@@ -293,6 +313,21 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+import {
+  ArrowRight,
+  Award,
+  BadgeCheck,
+  Briefcase,
+  Clock3,
+  Gauge,
+  Grid3X3,
+  Headphones,
+  Heart,
+  Map,
+  Plane,
+  ShieldCheck,
+  Users,
+} from "lucide-vue-next";
 import MainLayout from "@/layouts/MainLayout.vue";
 import { supabase } from "@/supabase";
 import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
@@ -318,8 +353,11 @@ const searchQuery = ref("");
 const selectedCategory = ref("");
 const selectedBase = ref("");
 const minimumPassengers = ref(null);
+const capacityFilter = ref("all");
+const selectedSort = ref("popular");
 const airportLabels = ref({});
 const isAircraftComboboxOpen = ref(false);
+const workspaceRef = ref(null);
 
 const router = useRouter();
 const { localizedPath, locale } = useLocalizedNavigation();
@@ -358,6 +396,146 @@ const categoryOptions = computed(() => [
     value: "Regional Jet",
     label: filterLabels.value.categoryOptions?.regionalJet || "Jet regional · capacidad alta para grupos",
   },
+]);
+
+const heroCopy = computed(() => {
+  if (isEnglish.value) {
+    return {
+      explore: "Explore Fleet",
+      sortBy: "Sort by",
+      popular: "Popular",
+      lowestRate: "Lowest rate",
+      capacity: "Capacity",
+      range: "Range",
+      from: "From",
+      estimatedTotal: "Est. total based on 2h min",
+      allAircraft: "All Aircraft",
+      availability: "Availability",
+      aircraftWorldwide: "Aircraft worldwide",
+      yearsExperience: "Years of experience",
+      certifiedOperator: "Certified operator",
+      globalCoverage: "Global Coverage",
+      globalCoverageText: "4,000+ airports worldwide",
+      safetyFirst: "Safety First",
+      safetyFirstText: "IS-BAO certified operations",
+      dedicatedSupport: "Dedicated Support",
+      dedicatedSupportText: "24/7 concierge service",
+      flexibleSolutions: "Flexible Solutions",
+      flexibleSolutionsText: "Tailored to your mission",
+    };
+  }
+
+  return {
+    explore: "Explorar flota",
+    sortBy: "Ordenar",
+    popular: "Popular",
+    lowestRate: "Menor tarifa",
+    capacity: "Capacidad",
+    range: "Alcance",
+    from: "Desde",
+    estimatedTotal: "Total estimado con minimo 2h",
+    allAircraft: "Toda la flota",
+    availability: "Disponibilidad",
+    aircraftWorldwide: "Aeronaves disponibles",
+    yearsExperience: "Anios de experiencia",
+    certifiedOperator: "Operador certificado",
+    globalCoverage: "Cobertura global",
+    globalCoverageText: "4,000+ aeropuertos en el mundo",
+    safetyFirst: "Seguridad primero",
+    safetyFirstText: "Operaciones certificadas IS-BAO",
+    dedicatedSupport: "Soporte dedicado",
+    dedicatedSupportText: "Concierge 24/7",
+    flexibleSolutions: "Soluciones flexibles",
+    flexibleSolutionsText: "A la medida de tu mision",
+  };
+});
+
+const featuredStats = computed(() => [
+  {
+    icon: Plane,
+    value: totalCount.value || "52",
+    label: heroCopy.value.aircraftWorldwide,
+  },
+  {
+    icon: Clock3,
+    value: "24/7",
+    label: heroCopy.value.availability,
+  },
+  {
+    icon: ShieldCheck,
+    value: "20+",
+    label: heroCopy.value.yearsExperience,
+  },
+  {
+    icon: Award,
+    value: "IS-BAO",
+    label: heroCopy.value.certifiedOperator,
+  },
+]);
+
+const fleetBenefits = computed(() => [
+  {
+    icon: Map,
+    title: heroCopy.value.globalCoverage,
+    text: heroCopy.value.globalCoverageText,
+  },
+  {
+    icon: ShieldCheck,
+    title: heroCopy.value.safetyFirst,
+    text: heroCopy.value.safetyFirstText,
+  },
+  {
+    icon: Headphones,
+    title: heroCopy.value.dedicatedSupport,
+    text: heroCopy.value.dedicatedSupportText,
+  },
+  {
+    icon: BadgeCheck,
+    title: heroCopy.value.flexibleSolutions,
+    text: heroCopy.value.flexibleSolutionsText,
+  },
+]);
+
+const categoryIcons = {
+  "HelicÃ³ptero": Plane,
+  "Monomotor PistÃ³n": Plane,
+  "TurbohÃ©lice": Plane,
+  "Jet ligero (Light Jet)": Plane,
+  "Midsize Jet (Mid Jet)": Plane,
+  "Super Midsize Jet": Plane,
+  "Heavy Jet": Plane,
+  "Regional Jet": Plane,
+};
+
+const categoryFilterOptions = computed(() => [
+  {
+    value: "",
+    label: heroCopy.value.allAircraft,
+    icon: Grid3X3,
+  },
+  ...categoryOptions.value
+    .filter((option) =>
+      [
+        "HelicÃ³ptero",
+        "TurbohÃ©lice",
+        "Jet ligero (Light Jet)",
+        "Midsize Jet (Mid Jet)",
+        "Heavy Jet",
+      ].includes(option.value),
+    )
+    .map((option) => ({
+      value: option.value,
+      label: getCategoryChipLabel(option.value),
+      icon: categoryIcons[option.value] || Plane,
+    })),
+]);
+
+const capacityFilterOptions = computed(() => [
+  { value: "all", label: isEnglish.value ? "All Capacity" : "Toda capacidad" },
+  { value: "1-6", label: "1 - 6 pax" },
+  { value: "7-9", label: "7 - 9 pax" },
+  { value: "10-13", label: "10 - 13 pax" },
+  { value: "14", label: "14+ pax" },
 ]);
 
 const filterLabels = computed(() => ({
@@ -559,31 +737,105 @@ const filteredAircraft = computed(() => {
   const minPassengers = Number(minimumPassengers.value);
 
   return allAircraft.value.filter((item) => {
+    const passengers = Number(item.capacidad_pasajeros || 0);
     const matchesQuery =
       !query ||
       normalizeText(item.nombre).includes(query) ||
       normalizeText(item.fabricante).includes(query);
 
     const matchesCategory = !category || item.categoria === category;
-    const matchesBase = !base || item.base === base;
+    const matchesBase =
+      !base || String(item.base || "").trim().toUpperCase() === base;
     const matchesPassengers =
       !Number.isFinite(minPassengers) ||
       minPassengers <= 0 ||
-      Number(item.capacidad_pasajeros || 0) >= minPassengers;
+      passengers >= minPassengers;
+    const matchesCapacityRange =
+      capacityFilter.value === "all" ||
+      (capacityFilter.value === "1-6" && passengers >= 1 && passengers <= 6) ||
+      (capacityFilter.value === "7-9" && passengers >= 7 && passengers <= 9) ||
+      (capacityFilter.value === "10-13" && passengers >= 10 && passengers <= 13) ||
+      (capacityFilter.value === "14" && passengers >= 14);
 
-    return matchesQuery && matchesCategory && matchesBase && matchesPassengers;
+    return matchesQuery && matchesCategory && matchesBase && matchesPassengers && matchesCapacityRange;
   });
+});
+
+const sortedFilteredAircraft = computed(() => {
+  const aircraft = [...filteredAircraft.value];
+
+  if (selectedSort.value === "priceAsc") {
+    return aircraft.sort(
+      (a, b) => Number(a.precio_renta_usd || 0) - Number(b.precio_renta_usd || 0),
+    );
+  }
+
+  if (selectedSort.value === "capacityDesc") {
+    return aircraft.sort(
+      (a, b) => Number(b.capacidad_pasajeros || 0) - Number(a.capacidad_pasajeros || 0),
+    );
+  }
+
+  if (selectedSort.value === "rangeDesc") {
+    return aircraft.sort(
+      (a, b) => Number(b.alcance_nm || 0) - Number(a.alcance_nm || 0),
+    );
+  }
+
+  return aircraft;
 });
 
 const totalCount = computed(() => allAircraft.value.length);
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredAircraft.value.length / pageSize)),
+  Math.max(1, Math.ceil(sortedFilteredAircraft.value.length / pageSize)),
 );
 const paginatedAircraft = computed(() => {
   const from = (currentPage.value - 1) * pageSize;
   const to = from + pageSize;
-  return filteredAircraft.value.slice(from, to);
+  return sortedFilteredAircraft.value.slice(from, to);
 });
+
+const getCategoryChipLabel = (category) => {
+  const label = aircraftCategoryLabels[category]?.[locale.value] || category;
+
+  return String(label)
+    .replace(/\s*\((?:Light|Mid) Jet\)/gi, "")
+    .replace("Single-Engine Piston", "Single Engine")
+    .trim();
+};
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat(isEnglish.value ? "en-US" : "es-MX", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+
+const setCategoryFilter = (value) => {
+  selectedCategory.value = value;
+};
+
+const setCapacityFilter = (value) => {
+  capacityFilter.value = value;
+
+  const minimumByFilter = {
+    all: null,
+    "1-6": 1,
+    "7-9": 7,
+    "10-13": 10,
+    14: 14,
+  };
+
+  minimumPassengers.value = minimumByFilter[value] ?? null;
+};
+
+const scrollToFleet = () => {
+  workspaceRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
+const goToQuoteRequest = () => {
+  router.push({ path: localizedPath("reserva") });
+};
 
 const checkAvailability = async (aircraftId) => {
   if (!aircraftId) return false;
@@ -821,7 +1073,7 @@ onMounted(async () => {
   }
 });
 
-watch([searchQuery, selectedCategory, selectedBase, minimumPassengers], () => {
+watch([searchQuery, selectedCategory, selectedBase, minimumPassengers, selectedSort], () => {
   currentPage.value = 1;
 });
 
@@ -836,26 +1088,27 @@ onBeforeUnmount(() => stopAutoSlide());
 
 <style scoped>
 .fleet-page {
-  --fleet-ink: #07111f;
-  --fleet-navy: #071624;
-  --fleet-blue: #175a8f;
-  --fleet-gold: #d0ac67;
-  --fleet-paper: #f5f7fa;
-  --fleet-muted: #627086;
-  --fleet-line: rgba(7, 17, 31, 0.12);
+  --fleet-ink: #071526;
+  --fleet-navy: #061625;
+  --fleet-navy-2: #0b2033;
+  --fleet-gold: #d5ad63;
+  --fleet-gold-2: #f0cc85;
+  --fleet-paper: #f6f8fb;
+  --fleet-muted: #647184;
+  --fleet-line: rgba(7, 21, 38, 0.12);
   color: var(--fleet-ink);
   background: #ffffff;
   overflow-x: clip;
 }
 
 .fleet-shell {
-  width: min(1220px, calc(100% - 40px));
+  width: min(1240px, calc(100% - 42px));
   margin: 0 auto;
 }
 
 .fleet-hero {
   position: relative;
-  min-height: 86vh;
+  min-height: 670px;
   display: flex;
   align-items: end;
   overflow: hidden;
@@ -876,90 +1129,180 @@ onBeforeUnmount(() => stopAutoSlide());
 
 .fleet-hero__overlay {
   background:
-    linear-gradient(90deg, rgba(7, 22, 36, 0.88), rgba(7, 22, 36, 0.42)),
-    linear-gradient(180deg, rgba(7, 22, 36, 0.12), rgba(7, 22, 36, 0.84));
+    linear-gradient(90deg, rgba(5, 17, 29, 0.94) 0%, rgba(5, 17, 29, 0.62) 42%, rgba(5, 17, 29, 0.34) 100%),
+    linear-gradient(180deg, rgba(5, 17, 29, 0.22) 0%, rgba(5, 17, 29, 0.82) 100%);
 }
 
 .fleet-hero__content {
   position: relative;
   z-index: 1;
-  padding: 160px 0 82px;
+  padding: 165px 0 58px;
   color: #ffffff;
 }
 
 .fleet-eyebrow {
   display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  color: var(--fleet-blue);
-  font-size: 0.74rem;
+  color: var(--fleet-gold);
+  font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .fleet-eyebrow--light {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--fleet-gold-2);
 }
 
 .fleet-hero h1 {
-  max-width: 820px;
-  margin: 0.9rem 0 1rem;
+  max-width: 720px;
+  margin: 0.85rem 0 1rem;
   color: #ffffff;
-  font-size: clamp(3.2rem, 7vw, 6.7rem);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.4rem, 6.4vw, 6.4rem);
+  font-weight: 700;
   line-height: 0.95;
-  letter-spacing: -0.04em;
 }
 
 .fleet-hero p {
-  max-width: 580px;
+  max-width: 560px;
   margin: 0;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 1.12rem;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.1rem;
   line-height: 1.75;
 }
 
+.fleet-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 34px;
+}
+
+.fleet-button,
+.quote-button {
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  transition: transform 0.22s ease, background 0.22s ease, border-color 0.22s ease, color 0.22s ease;
+}
+
+.fleet-button svg,
+.quote-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.fleet-button--gold {
+  border: 1px solid var(--fleet-gold);
+  padding: 0 28px;
+  background: linear-gradient(180deg, var(--fleet-gold-2), var(--fleet-gold));
+  color: #061625;
+}
+
+.fleet-button--ghost {
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  padding: 0 28px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.fleet-button:hover,
+.quote-button:hover {
+  transform: translateY(-2px);
+}
+
+.fleet-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+  max-width: 820px;
+  margin-top: 64px;
+}
+
+.fleet-stat {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.fleet-stat svg {
+  width: 44px;
+  height: 44px;
+  padding: 9px;
+  color: var(--fleet-gold);
+  border: 1px solid rgba(213, 173, 99, 0.5);
+  border-radius: 999px;
+}
+
+.fleet-stat strong,
+.fleet-stat span {
+  display: block;
+}
+
+.fleet-stat strong {
+  color: #ffffff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.fleet-stat span {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
 .fleet-workspace {
-  padding: 94px 0 112px;
-  background:
-    linear-gradient(180deg, #ffffff 0%, var(--fleet-paper) 100%);
+  padding: 54px 0 78px;
+  background: radial-gradient(circle at 100% 8%, rgba(213, 173, 99, 0.08), transparent 24%), var(--fleet-paper);
 }
 
 .fleet-intro {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 32px;
-  align-items: end;
-  margin-bottom: 44px;
+  gap: 30px;
+  align-items: center;
+  margin-bottom: 32px;
 }
 
 .fleet-intro h2 {
-  max-width: 850px;
-  margin: 0.8rem 0 1rem;
+  max-width: 780px;
+  margin: 0.55rem 0 0.6rem;
   color: var(--fleet-ink);
-  font-size: clamp(2.1rem, 4.8vw, 4.4rem);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3.6rem);
   line-height: 0.98;
-  letter-spacing: -0.04em;
 }
 
 .fleet-intro p {
-  max-width: 650px;
+  max-width: 760px;
   margin: 0;
   color: var(--fleet-muted);
-  line-height: 1.8;
+  line-height: 1.65;
 }
 
 .fleet-summary {
-  min-width: 150px;
-  padding: 18px 0;
-  border-top: 1px solid var(--fleet-line);
-  border-bottom: 1px solid var(--fleet-line);
+  min-width: 160px;
+  text-align: center;
 }
 
 .fleet-summary strong {
   display: block;
   color: var(--fleet-ink);
-  font-size: 2.3rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 3rem;
   line-height: 1;
 }
 
@@ -967,62 +1310,144 @@ onBeforeUnmount(() => stopAutoSlide());
   display: block;
   margin-top: 0.45rem;
   color: var(--fleet-muted);
-  font-size: 0.88rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.fleet-loading {
-  min-height: 360px;
+.fleet-loading,
+.fleet-empty {
+  min-height: 260px;
   display: grid;
   place-items: center;
-  gap: 14px;
-  border-top: 1px solid var(--fleet-line);
-  border-bottom: 1px solid var(--fleet-line);
   color: var(--fleet-muted);
 }
 
 .fleet-spinner {
   width: 46px;
   height: 46px;
-  border: 3px solid rgba(7, 17, 31, 0.1);
-  border-top-color: var(--fleet-blue);
+  border: 3px solid rgba(7, 21, 38, 0.1);
+  border-top-color: var(--fleet-gold);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-.fleet-filters {
+.fleet-toolbar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: 22px;
+  margin-bottom: 22px;
 }
 
-.fleet-field {
+.fleet-tabs,
+.fleet-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fleet-tabs {
   display: grid;
-  gap: 8px;
+  grid-template-columns: 1.1fr repeat(5, 1fr);
 }
 
-.fleet-combobox {
-  position: relative;
-}
-
-.fleet-field span {
-  color: var(--fleet-muted);
-  font-size: 0.78rem;
+.fleet-tab,
+.fleet-chip {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid rgba(7, 21, 38, 0.12);
+  border-radius: 7px;
+  background: #ffffff;
+  color: #445268;
+  cursor: pointer;
+  font-size: 0.72rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 28px rgba(7, 21, 38, 0.04);
+}
+
+.fleet-tab {
+  min-width: 0;
+  padding: 0 18px;
+}
+
+.fleet-chip {
+  min-width: 132px;
+  padding: 0 16px;
+}
+
+.fleet-tab svg,
+.fleet-chip svg {
+  width: 17px;
+  height: 17px;
+}
+
+.fleet-tab.active,
+.fleet-chip.active,
+.fleet-tab:hover,
+.fleet-chip:hover {
+  background: var(--fleet-ink);
+  border-color: var(--fleet-ink);
+  color: #ffffff;
+}
+
+.fleet-toolbar__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: end;
+}
+
+.fleet-field,
+.fleet-sort {
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+
+.fleet-field > span,
+.fleet-sort > span {
+  color: var(--fleet-muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .fleet-field input,
-.fleet-field select {
+.fleet-field select,
+.fleet-sort select {
   width: 100%;
-  min-height: 48px;
+  min-height: 46px;
   padding: 0 14px;
-  border: 1px solid var(--fleet-line);
-  border-radius: 8px;
+  border: 1px solid rgba(7, 21, 38, 0.12);
+  border-radius: 7px;
+  outline: none;
   background: #ffffff;
   color: var(--fleet-ink);
   font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.fleet-field--search {
+  width: min(260px, 100%);
+}
+
+.fleet-field--base {
+  width: min(230px, 100%);
+}
+
+.fleet-sort {
+  width: 250px;
+}
+
+.fleet-combobox {
+  position: relative;
 }
 
 .fleet-combobox__menu {
@@ -1031,74 +1456,64 @@ onBeforeUnmount(() => stopAutoSlide());
   left: 0;
   right: 0;
   z-index: 20;
-  max-height: 320px;
+  max-height: 280px;
   overflow-y: auto;
   padding: 8px;
-  border: 1px solid rgba(7, 17, 31, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 20px 40px rgba(7, 17, 31, 0.12);
-  backdrop-filter: blur(12px);
+  border: 1px solid rgba(7, 21, 38, 0.08);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 20px 40px rgba(7, 21, 38, 0.14);
 }
 
 .fleet-combobox__option {
   width: 100%;
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
+  min-height: 42px;
+  justify-content: flex-start;
   border: 0;
-  border-radius: 10px;
+  border-radius: 6px;
   background: transparent;
   color: var(--fleet-ink);
-  cursor: pointer;
   font: inherit;
-  font-weight: 700;
+  font-weight: 800;
   text-align: left;
 }
 
 .fleet-combobox__option:hover {
-  background: rgba(23, 90, 143, 0.08);
-  color: var(--fleet-blue);
+  background: rgba(213, 173, 99, 0.14);
 }
 
-.fleet-results,
-.fleet-empty {
-  margin: 0 0 20px;
+.fleet-results {
+  margin: 0 0 18px;
   color: var(--fleet-muted);
-}
-
-.fleet-empty {
-  min-height: 200px;
-  display: grid;
-  place-items: center;
-  border-top: 1px solid var(--fleet-line);
-  border-bottom: 1px solid var(--fleet-line);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .fleet-list {
   display: grid;
-  gap: 22px;
+  gap: 16px;
 }
 
 .aircraft-row {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(240px, 360px) minmax(0, 1fr) minmax(280px, 330px);
+  grid-template-columns: minmax(250px, 390px) minmax(0, 1fr) minmax(230px, 300px);
   gap: 28px;
   align-items: stretch;
-  padding: 24px 0;
-  border-top: 1px solid var(--fleet-line);
-}
-
-.aircraft-row:last-child {
-  border-bottom: 1px solid var(--fleet-line);
+  padding: 12px 22px 12px 12px;
+  border: 1px solid rgba(7, 21, 38, 0.08);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 18px 46px rgba(7, 21, 38, 0.08);
 }
 
 .aircraft-media {
   position: relative;
   display: block;
   width: 100%;
-  min-height: 260px;
+  min-height: 210px;
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -1116,18 +1531,18 @@ onBeforeUnmount(() => stopAutoSlide());
 
 .aircraft-media span {
   position: absolute;
-  left: 18px;
-  bottom: 18px;
-  display: inline-flex;
+  left: 16px;
+  bottom: 16px;
   min-height: 34px;
+  display: inline-flex;
   align-items: center;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.92);
   color: var(--fleet-ink);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -1137,143 +1552,149 @@ onBeforeUnmount(() => stopAutoSlide());
 
 .aircraft-main {
   align-self: center;
+  padding: 12px 0;
 }
 
 .aircraft-category {
   display: block;
-  color: var(--fleet-blue);
-  font-size: 0.76rem;
+  color: var(--fleet-gold);
+  font-size: 0.7rem;
   font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
 .aircraft-main h3 {
-  margin: 0.75rem 0 0.9rem;
+  margin: 0.35rem 0 0.55rem;
   color: var(--fleet-ink);
-  font-size: clamp(1.8rem, 3vw, 3rem);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.75rem, 2.8vw, 2.55rem);
   line-height: 1;
-  letter-spacing: -0.04em;
 }
 
 .aircraft-main p {
   max-width: 620px;
   margin: 0;
-  color: var(--fleet-muted);
-  line-height: 1.75;
+  color: #526177;
+  line-height: 1.55;
 }
 
 .aircraft-specs {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 24px;
+  gap: 14px 18px;
+  margin-top: 18px;
 }
 
-.aircraft-specs span,
-.aircraft-status {
+.aircraft-specs span {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--fleet-line);
+  gap: 6px;
+  min-height: 24px;
+  color: #28384c;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.aircraft-specs svg {
+  width: 15px;
+  height: 15px;
   color: var(--fleet-ink);
-  font-size: 0.82rem;
-  font-weight: 700;
 }
 
 .aircraft-specs strong {
-  margin-right: 5px;
-  color: var(--fleet-blue);
+  color: var(--fleet-ink);
 }
 
 .aircraft-status--available {
-  border-color: rgba(26, 127, 55, 0.2);
-  background: rgba(26, 127, 55, 0.08);
-  color: #1e7e34;
+  color: #16813e !important;
 }
 
 .aircraft-status--unavailable {
-  border-color: rgba(198, 40, 40, 0.2);
-  background: rgba(198, 40, 40, 0.08);
-  color: #c62828;
+  color: #b73737 !important;
 }
 
 .aircraft-action {
+  position: relative;
   display: grid;
-  align-content: start;
-  gap: 14px;
-  border-left: 1px solid var(--fleet-line);
-  padding-left: 28px;
+  align-content: center;
+  gap: 12px;
+  border-left: 1px solid rgba(7, 21, 38, 0.12);
+  padding: 14px 0 14px 26px;
+}
+
+.aircraft-favorite {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #7d8aa0;
+}
+
+.aircraft-favorite svg {
+  width: 18px;
+  height: 18px;
+}
+
+.aircraft-price span,
+.aircraft-price em {
+  display: block;
+  color: var(--fleet-muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .aircraft-price span {
-  display: block;
-  color: var(--fleet-muted);
-  font-size: 0.76rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .aircraft-price strong {
   display: block;
-  margin-top: 0.35rem;
+  margin: 0.2rem 0 0.25rem;
   color: var(--fleet-ink);
-  font-size: 1.2rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2rem;
+  line-height: 1;
 }
 
-.fleet-calendar {
-  width: 100%;
-  pointer-events: none;
-}
-
-.fleet-calendar :deep(.vc-container) {
-  width: 100%;
-  border: 1px solid var(--fleet-line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: none;
-}
-
-.fleet-calendar :deep(.vc-day) {
-  cursor: default !important;
-}
-
-.fleet-calendar :deep(.vc-day-content) {
-  border-radius: 6px;
-  font-weight: 600;
-}
-
-.fleet-calendar :deep(.vc-highlight) {
-  background-color: #c62828 !important;
-  border-color: #c62828 !important;
+.aircraft-price small {
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .quote-button {
   width: 100%;
-  min-height: 54px;
-  padding: 0.95rem 1.1rem;
-  border: 0;
-  border-radius: 8px;
-  background: var(--fleet-ink);
-  color: #ffffff;
-  cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  transition:
-    transform 0.22s ease,
-    background 0.22s ease,
-    box-shadow 0.22s ease;
+  padding: 0 18px;
 }
 
-.quote-button:hover {
-  transform: translateY(-2px);
-  background: var(--fleet-blue);
-  box-shadow: 0 18px 34px rgba(23, 90, 143, 0.22);
+.quote-button--dark {
+  border: 1px solid var(--fleet-ink);
+  background: var(--fleet-ink);
+  color: #ffffff;
+}
+
+.quote-button--dark:hover {
+  background: var(--fleet-navy-2);
+}
+
+.quote-button--outline {
+  border: 1px solid rgba(213, 173, 99, 0.75);
+  background: #ffffff;
+  color: #b4873d;
+}
+
+.quote-button--outline:hover {
+  background: rgba(213, 173, 99, 0.1);
 }
 
 .pagination {
@@ -1281,29 +1702,25 @@ onBeforeUnmount(() => stopAutoSlide());
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 14px;
-  margin-top: 54px;
+  gap: 10px;
+  margin-top: 44px;
 }
 
 .pagination button,
 .pagination span {
-  min-height: 44px;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 18px;
-  border-radius: 8px;
-  border: 1px solid var(--fleet-line);
+  padding: 0 16px;
+  border-radius: 7px;
+  border: 1px solid rgba(7, 21, 38, 0.12);
   background: #ffffff;
   color: var(--fleet-ink);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-
-.pagination button {
-  cursor: pointer;
 }
 
 .pagination button:hover:not(:disabled) {
@@ -1312,8 +1729,58 @@ onBeforeUnmount(() => stopAutoSlide());
 }
 
 .pagination button:disabled {
-  opacity: 0.36;
+  opacity: 0.38;
   cursor: not-allowed;
+}
+
+.fleet-benefits {
+  background: linear-gradient(180deg, var(--fleet-navy-2), var(--fleet-navy));
+  color: #ffffff;
+}
+
+.fleet-benefits__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  padding: 34px 0;
+}
+
+.fleet-benefit {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 28px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.fleet-benefit:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.fleet-benefit svg {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  color: var(--fleet-gold);
+}
+
+.fleet-benefit strong,
+.fleet-benefit span {
+  display: block;
+}
+
+.fleet-benefit strong {
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fleet-benefit span {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.35;
 }
 
 .fleet-modal-overlay {
@@ -1382,9 +1849,9 @@ onBeforeUnmount(() => stopAutoSlide());
 .modal-info h2 {
   margin: 0.8rem 0 1.5rem;
   color: var(--fleet-ink);
+  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(2rem, 4vw, 3.4rem);
   line-height: 1;
-  letter-spacing: -0.04em;
 }
 
 .modal-specs {
@@ -1417,7 +1884,7 @@ onBeforeUnmount(() => stopAutoSlide());
 .modal-specs strong {
   display: block;
   margin-top: 0.4rem;
-  color: var(--fleet-blue);
+  color: var(--fleet-ink);
   font-size: 1.1rem;
 }
 
@@ -1447,8 +1914,14 @@ onBeforeUnmount(() => stopAutoSlide());
   }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1100px) {
+  .fleet-hero__stats,
+  .fleet-benefits__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .fleet-intro,
+  .fleet-toolbar__row,
   .aircraft-row,
   .fleet-modal-grid {
     grid-template-columns: 1fr;
@@ -1456,15 +1929,13 @@ onBeforeUnmount(() => stopAutoSlide());
 
   .aircraft-action {
     border-left: 0;
-    padding-left: 0;
+    border-top: 1px solid rgba(7, 21, 38, 0.12);
+    padding: 22px 0 10px;
   }
 
-  .fleet-summary {
-    width: 100%;
-  }
-
-  .fleet-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .aircraft-favorite {
+    right: 0;
+    top: 14px;
   }
 
   .modal-media {
@@ -1474,36 +1945,87 @@ onBeforeUnmount(() => stopAutoSlide());
 
 @media (max-width: 768px) {
   .fleet-shell {
-    width: min(100% - 32px, 1220px);
+    width: min(100% - 32px, 1240px);
   }
 
   .fleet-hero {
-    min-height: 72vh;
+    min-height: 720px;
   }
 
   .fleet-hero__content {
-    padding: 128px 0 54px;
+    padding: 120px 0 42px;
   }
 
   .fleet-hero h1 {
-    font-size: 3rem;
+    font-size: 3.15rem;
   }
 
-  .fleet-workspace {
-    padding: 70px 0 84px;
-  }
-
-  .aircraft-row {
-    gap: 20px;
-    padding: 22px 0;
-  }
-
-  .fleet-filters {
+  .fleet-hero__stats,
+  .fleet-benefits__grid {
     grid-template-columns: 1fr;
   }
 
+  .fleet-stat {
+    align-items: flex-start;
+  }
+
+  .fleet-workspace {
+    padding: 46px 0 64px;
+  }
+
+  .fleet-intro {
+    margin-bottom: 26px;
+  }
+
+  .fleet-summary {
+    text-align: left;
+  }
+
+  .fleet-tabs,
+  .fleet-chip-group {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .fleet-tabs {
+    display: flex;
+  }
+
+  .fleet-tab,
+  .fleet-chip {
+    flex: 0 0 auto;
+  }
+
+  .fleet-sort {
+    width: 100%;
+  }
+
+  .aircraft-row {
+    gap: 16px;
+    padding: 10px;
+  }
+
   .aircraft-media {
-    min-height: 230px;
+    min-height: 225px;
+  }
+
+  .aircraft-price strong {
+    font-size: 1.7rem;
+  }
+
+  .fleet-benefits__grid {
+    padding: 24px 0;
+  }
+
+  .fleet-benefit {
+    padding: 18px 0;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .fleet-benefit:first-child {
+    border-top: 0;
   }
 
   .fleet-modal-overlay {

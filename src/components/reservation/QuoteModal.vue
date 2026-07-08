@@ -113,7 +113,7 @@
 
                   <div class="quote-metric">
                     <span>{{ t.flightTime }}</span>
-                    <strong>{{ breakdowns?.[index]?.billableHHMM || formatHours(breakdowns?.[index]?.hours) }}</strong>
+                    <strong>{{ breakdowns?.[index]?.estimatedHHMM || formatHours(breakdowns?.[index]?.hours) }}</strong>
                   </div>
 
                   <div class="quote-metric">
@@ -277,7 +277,7 @@ const t = computed(() =>
         subtotal: "Subtotal",
         commercialMargin: "Margen comercial",
         tax: "IVA / Impuesto",
-        billableHours: "facturables",
+        estimatedHours: "estimadas",
         totalTime: "tiempo total",
         totalEstimated: "Total estimado",
       }
@@ -332,7 +332,7 @@ const t = computed(() =>
         subtotal: "Subtotal",
         commercialMargin: "Commercial Margin",
         tax: "VAT / Tax",
-        billableHours: "billable",
+        estimatedHours: "estimated",
         totalTime: "total time",
         totalEstimated: "Estimated total",
       },
