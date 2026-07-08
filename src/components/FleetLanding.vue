@@ -89,15 +89,46 @@
                   </button>
                 </div>
 
-                <label class="fleet-sort">
-                  <span>{{ heroCopy.sortBy }}</span>
-                  <select v-model="selectedSort">
-                    <option value="popular">{{ heroCopy.popular }}</option>
-                    <option value="priceAsc">{{ heroCopy.lowestRate }}</option>
-                    <option value="capacityDesc">{{ heroCopy.capacity }}</option>
-                    <option value="rangeDesc">{{ heroCopy.range }}</option>
-                  </select>
-                </label>
+                <div class="fleet-toolbar__meta">
+                  <label class="fleet-field fleet-field--search">
+                    <span>{{ filterLabels.search }}</span>
+                    <div class="fleet-combobox">
+                      <Search aria-hidden="true" class="fleet-search-icon" />
+                      <input
+                        v-model="searchQuery"
+                        type="text"
+                        :placeholder="filterLabels.searchPlaceholder"
+                        @focus="isAircraftComboboxOpen = true"
+                        @blur="handleAircraftComboboxBlur"
+                      />
+
+                      <div
+                        v-if="isAircraftComboboxOpen && filteredAircraftSearchOptions.length"
+                        class="fleet-combobox__menu"
+                      >
+                        <button
+                          v-for="option in filteredAircraftSearchOptions"
+                          :key="option"
+                          type="button"
+                          class="fleet-combobox__option"
+                          @mousedown.prevent="selectAircraftSearchOption(option)"
+                        >
+                          {{ option }}
+                        </button>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label class="fleet-sort">
+                    <span>{{ heroCopy.sortBy }}</span>
+                    <select v-model="selectedSort">
+                      <option value="popular">{{ heroCopy.popular }}</option>
+                      <option value="priceAsc">{{ heroCopy.lowestRate }}</option>
+                      <option value="capacityDesc">{{ heroCopy.capacity }}</option>
+                      <option value="rangeDesc">{{ heroCopy.range }}</option>
+                    </select>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -136,6 +167,10 @@
               <div class="aircraft-main">
                 <span class="aircraft-category">{{ getAircraftCategoryLabel(item) }}</span>
                 <h3>{{ item.nombre }}</h3>
+                <p v-if="item.base_city || item.base" class="aircraft-base">
+                  <strong>{{ filterLabels.base }}:</strong>
+                  <strong class="aircraft-base__value">{{ item.base_city || item.base }}</strong>
+                </p>
                 <p>{{ getAircraftDescription(item) }}</p>
 
                 <div class="aircraft-specs">
@@ -326,6 +361,7 @@ import {
   Helicopter,
   Map,
   Plane,
+  Search,
   ShieldCheck,
   Users,
 } from "lucide-vue-next";
@@ -977,6 +1013,7 @@ const loadFleet = async () => {
         fabricante: item.manufacturer || item.engines || "",
         categoria: normalizeAircraftCategory(item.aircraft_type),
         base: item.iata,
+        base_city: item.base_city || "",
         capacidad_pasajeros: item.capacity_passengers,
         cruise_speed_knots: item.cruise_speed_knots,
         alcance_horas: item.cruise_speed_knots,
@@ -1468,6 +1505,21 @@ onBeforeUnmount(() => stopAutoSlide());
   align-items: end;
 }
 
+.fleet-toolbar__row .fleet-chip-group {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.fleet-toolbar__meta {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) 250px;
+  gap: 10px;
+  align-items: end;
+  width: max-content;
+  justify-self: end;
+}
+
 .fleet-field,
 .fleet-sort {
   position: relative;
@@ -1514,6 +1566,22 @@ onBeforeUnmount(() => stopAutoSlide());
 
 .fleet-combobox {
   position: relative;
+}
+
+.fleet-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  color: #7a889b;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.fleet-combobox input {
+  padding-left: 42px;
 }
 
 .fleet-combobox__menu {
@@ -1643,6 +1711,32 @@ onBeforeUnmount(() => stopAutoSlide());
   margin: 0;
   color: #526177;
   line-height: 1.55;
+}
+
+.aircraft-base {
+  margin: 0 0 0.6rem;
+  color: #7a889b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.aircraft-base strong {
+  color: var(--fleet-ink);
+  font-weight: 900;
+}
+
+.aircraft-base {
+  color: #5f6e82;
+}
+
+.aircraft-base__value {
+  display: inline-block;
+  margin-left: 0.24rem;
+  color: #6d7c95;
+  font-weight: 900;
 }
 
 .aircraft-specs {
@@ -1993,6 +2087,10 @@ onBeforeUnmount(() => stopAutoSlide());
     grid-template-columns: 1fr;
   }
 
+  .fleet-toolbar__meta {
+    grid-template-columns: 1fr;
+  }
+
   .aircraft-action {
     border-left: 0;
     border-top: 1px solid rgba(7, 21, 38, 0.12);
@@ -2063,6 +2161,7 @@ onBeforeUnmount(() => stopAutoSlide());
     flex: 0 0 auto;
   }
 
+  .fleet-field--search,
   .fleet-sort {
     width: 100%;
   }

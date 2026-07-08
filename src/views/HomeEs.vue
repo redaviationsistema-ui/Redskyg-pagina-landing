@@ -131,7 +131,7 @@ const content = {
       {
         name: "TURBOHÉLICES",
         meta: "Regional eficiente",
-        image: "images/Home/AVIONES/TURBOHÉLICES.png",
+        image: "images/Home/AVIONES/TURBOH.png",
         alt: "Turbohélice",
         icon: "turboprop",
         stats: [

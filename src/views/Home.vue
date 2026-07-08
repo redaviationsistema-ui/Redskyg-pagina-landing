@@ -126,7 +126,7 @@ const content = {
       {
         name: "TURBOPROPS",
         meta: "Efficient aircraft for regional travel.",
-        image: "images/Home/AVIONES/TURBOHÉLICES.png",
+        image: "images/Home/AVIONES/TURBOH.png",
         alt: "Turboprop aircraft",
         icon: "turboprop",
         stats: [

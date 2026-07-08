@@ -1090,11 +1090,10 @@ const allKnownAirports = computed(() => {
 const getAircraftBaseLabel = (aircraft) => {
   if (!aircraft) return "-";
 
+  const baseCity = String(aircraft.base_city || aircraft.ciudad || aircraft.city || "").trim();
   const baseCode = String(aircraft.iata || aircraft.home_base || "").trim().toUpperCase();
-  const city = String(aircraft.ciudad || "").trim();
 
-  if (city && baseCode) return `${city} (${baseCode})`;
-  if (city) return city;
+  if (baseCity) return baseCity;
 
   const match = allKnownAirports.value.find((airport) => {
     const airportCode = String(airport?.iata || airport?.IATA || "").trim().toUpperCase();
