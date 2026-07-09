@@ -1,47 +1,427 @@
 <template>
   <MainLayout>
-    <section class="quote section">
-      <img class="hero-bg" src="/images/reserva/DSC03873.jpg" />
-      <div class="quote-overlay"></div>
+    <div class="reservation-landing">
+      <section class="reservation-hero" aria-labelledby="reservation-title">
+        <img
+          class="reservation-hero__image"
+          src="/images/reserva/1.png"
+          alt="Private jet ready for departure"
+        />
+        <div class="reservation-hero__shade"></div>
 
-      <div class="container quote-content">
-        <div class="quote-right">
-          <div class="quote-left">
-            <div class="quote-header">
-              <h5 class="subtitle">{{ copy.subtitle }}</h5>
-              <h2>{{ copy.title }}</h2>
+        <div class="reservation-shell reservation-hero__content">
+          <div class="reservation-copy">
+            <p class="reservation-kicker">{{ copy.heroEyebrow }}</p>
+            <h1 id="reservation-title">{{ copy.heroTitle }}</h1>
+            <p>{{ copy.heroDescription }}</p>
+          </div>
+
+          <form
+            class="availability-card"
+            novalidate
+            :aria-describedby="compactError ? 'reservation-card-error reservation-card-note' : 'reservation-card-note'"
+            @submit.prevent="handleCompactSubmit"
+          >
+            <div v-show="activeStep === 0" class="flight-card-header">
+              <h2>{{ copy.selectFlightsTitle }}</h2>
+              <div class="trip-toggle" role="group" :aria-label="copy.tripTypeLabel">
+                <button
+                  class="trip-toggle__button"
+                  type="button"
+                  :class="{ active: tripMode === 'one-way' }"
+                  @click="setTripMode('one-way')"
+                >
+                  <span aria-hidden="true">×</span>
+                  {{ copy.oneWayLabel }}
+                </button>
+                <button
+                  class="trip-toggle__button"
+                  type="button"
+                  :class="{ active: tripMode === 'round-trip' }"
+                  @click="setTripMode('round-trip')"
+                >
+                  <span aria-hidden="true">↻</span>
+                  {{ copy.roundTripLabel }}
+                </button>
+              </div>
+            </div>
+
+            <div v-show="activeStep > 0" class="steps" aria-label="Reservation steps" role="list">
+              <button
+                v-for="(step, index) in copy.steps"
+                :key="step"
+                class="step"
+                type="button"
+                role="listitem"
+                :class="{
+                  'step--active': index === activeStep,
+                  'step--complete': index < activeStep,
+                }"
+                :aria-current="index === activeStep ? 'step' : undefined"
+                :disabled="index > maxReachableStep"
+                @click="goToStep(index)"
+              >
+                <span>{{ index + 1 }}</span>
+                <small>{{ step }}</small>
+              </button>
+            </div>
+
+            <div v-show="activeStep === 0" class="availability-grid">
+              <div class="availability-field">
+                <label :for="fieldIds.from">{{ copy.fromLabel }}</label>
+                <div class="field-control">
+                  <PlaneTakeoff aria-hidden="true" />
+                  <select
+                    :id="fieldIds.from"
+                    v-model="routes[0].fromAirport"
+                    required
+                    :aria-describedby="`${fieldIds.from}-help`"
+                    @change="setCompactAirport('from')"
+                  >
+                    <option value="">{{ copy.selectAirport }}</option>
+                    <option
+                      v-for="airport in compactAirportOptions"
+                      :key="`from-${airport.iata || airport.aeropuerto}`"
+                      :value="getAirportOptionValue(airport)"
+                    >
+                      {{ airport.ciudad }} ({{ getAirportOptionValue(airport) }})
+                    </option>
+                  </select>
+                </div>
+                <small :id="`${fieldIds.from}-help`">{{ compactFromMeta }}</small>
+              </div>
+
+              <button
+                class="swap-button"
+                type="button"
+                :aria-label="copy.swapLabel"
+                @click="swapCompactRoute"
+              >
+                <ArrowLeftRight aria-hidden="true" />
+              </button>
+
+              <div class="availability-field">
+                <label :for="fieldIds.to">{{ copy.toLabel }}</label>
+                <div class="field-control">
+                  <PlaneTakeoff aria-hidden="true" />
+                  <select
+                    :id="fieldIds.to"
+                    v-model="routes[0].toAirport"
+                    required
+                    :aria-describedby="`${fieldIds.to}-help`"
+                    @change="setCompactAirport('to')"
+                  >
+                    <option value="">{{ copy.selectAirport }}</option>
+                    <option
+                      v-for="airport in compactAirportOptions"
+                      :key="`to-${airport.iata || airport.aeropuerto}`"
+                      :value="getAirportOptionValue(airport)"
+                    >
+                      {{ airport.ciudad }} ({{ getAirportOptionValue(airport) }})
+                    </option>
+                  </select>
+                </div>
+                <small :id="`${fieldIds.to}-help`">{{ compactToMeta }}</small>
+              </div>
+
+              <div class="availability-field">
+                <label :for="fieldIds.date">{{ copy.departureLabel }}</label>
+                <div class="field-control">
+                  <CalendarDays aria-hidden="true" />
+                  <input
+                    :id="fieldIds.date"
+                    v-model="routes[0].start_date"
+                    type="datetime-local"
+                    required
+                    :min="minDateTime"
+                    :aria-describedby="`${fieldIds.date}-help`"
+                    @change="onOutboundDateChange"
+                  />
+                </div>
+                <small :id="`${fieldIds.date}-help`">{{ compactDateMeta }}</small>
+              </div>
+
+              <div class="availability-field">
+                <label :for="fieldIds.passengers">{{ copy.passengersLabel }}</label>
+                <div class="field-control">
+                  <UsersRound aria-hidden="true" />
+                  <select
+                    :id="fieldIds.passengers"
+                    v-model.number="routes[0].passengers"
+                    required
+                    :aria-describedby="`${fieldIds.passengers}-help`"
+                  >
+                    <option v-for="count in passengerOptions" :key="count" :value="count">
+                      {{ count }} {{ count === 1 ? copy.passenger : copy.passengers }}
+                    </option>
+                  </select>
+                </div>
+                <small :id="`${fieldIds.passengers}-help`">{{ copy.passengerMeta }}</small>
+              </div>
+            </div>
+
+            <div v-if="activeStep === 0 && hasReturnFlight" class="return-flight-block">
+              <div class="return-flight-title">
+                <span>{{ copy.returnFlightLabel }}</span>
+                <button
+                  class="remove-return-button"
+                  type="button"
+                  :aria-label="copy.removeReturnLabel"
+                  @click="removeReturnFlight"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div class="availability-grid availability-grid--return">
+                <div class="availability-field">
+                  <label :for="fieldIds.returnFrom">{{ copy.fromLabel }}</label>
+                  <div class="field-control">
+                    <PlaneTakeoff aria-hidden="true" />
+                    <select
+                      :id="fieldIds.returnFrom"
+                      v-model="returnRoute.fromAirport"
+                      required
+                      @change="setReturnAirport('from')"
+                    >
+                      <option value="">{{ copy.selectAirport }}</option>
+                      <option
+                        v-for="airport in compactAirportOptions"
+                        :key="`return-from-${airport.iata || airport.aeropuerto}`"
+                        :value="getAirportOptionValue(airport)"
+                      >
+                        {{ airport.ciudad }} ({{ getAirportOptionValue(airport) }})
+                      </option>
+                    </select>
+                  </div>
+                  <small>{{ returnFromMeta }}</small>
+                </div>
+
+                <button
+                  class="swap-button"
+                  type="button"
+                  :aria-label="copy.swapLabel"
+                  @click="swapReturnRoute"
+                >
+                  <ArrowLeftRight aria-hidden="true" />
+                </button>
+
+                <div class="availability-field">
+                  <label :for="fieldIds.returnTo">{{ copy.toLabel }}</label>
+                  <div class="field-control">
+                    <PlaneTakeoff aria-hidden="true" />
+                    <select
+                      :id="fieldIds.returnTo"
+                      v-model="returnRoute.toAirport"
+                      required
+                      @change="setReturnAirport('to')"
+                    >
+                      <option value="">{{ copy.selectAirport }}</option>
+                      <option
+                        v-for="airport in compactAirportOptions"
+                        :key="`return-to-${airport.iata || airport.aeropuerto}`"
+                        :value="getAirportOptionValue(airport)"
+                      >
+                        {{ airport.ciudad }} ({{ getAirportOptionValue(airport) }})
+                      </option>
+                    </select>
+                  </div>
+                  <small>{{ returnToMeta }}</small>
+                </div>
+
+                <div class="availability-field">
+                  <label :for="fieldIds.returnDate">{{ copy.returnDateLabel }}</label>
+                  <div class="field-control">
+                    <CalendarDays aria-hidden="true" />
+                    <input
+                      :id="fieldIds.returnDate"
+                      v-model="returnRoute.start_date"
+                      type="datetime-local"
+                      required
+                      :min="routes[0].start_date || minDateTime"
+                      @change="syncReturnEndDate"
+                    />
+                  </div>
+                  <small>{{ returnDateMeta }}</small>
+                </div>
+
+                <div class="availability-field">
+                  <label :for="fieldIds.returnPassengers">{{ copy.passengersLabel }}</label>
+                  <div class="field-control">
+                    <UsersRound aria-hidden="true" />
+                    <select
+                      :id="fieldIds.returnPassengers"
+                      v-model.number="returnRoute.passengers"
+                      required
+                    >
+                      <option v-for="count in passengerOptions" :key="count" :value="count">
+                        {{ count }} {{ count === 1 ? copy.passenger : copy.passengers }}
+                      </option>
+                    </select>
+                  </div>
+                  <small>{{ copy.passengerMeta }}</small>
+                </div>
+              </div>
+            </div>
+
+            <button
+              v-show="activeStep === 0 && tripMode === 'round-trip'"
+              class="add-flight-button"
+              type="button"
+              @click="addCompactFlight"
+            >
+              <span aria-hidden="true">+</span>
+              {{ copy.addFlightLabel }}
+            </button>
+
+            <div v-show="activeStep === 1" class="step-panel">
+              <div class="availability-field availability-field--wide">
+                <label :for="fieldIds.aircraft">{{ copy.aircraftLabel }}</label>
+                <div class="field-control">
+                  <PlaneTakeoff aria-hidden="true" />
+                  <select
+                    :id="fieldIds.aircraft"
+                    v-model="routes[0].aircraft_id"
+                    required
+                    :aria-describedby="`${fieldIds.aircraft}-help`"
+                  >
+                    <option value="">{{ copy.selectAircraft }}</option>
+                    <option
+                      v-for="aircraft in compactAircraftOptions"
+                      :key="aircraft.id"
+                      :value="aircraft.id"
+                    >
+                      {{ aircraft.name }} - {{ aircraft.capacity_passengers }} pax
+                    </option>
+                  </select>
+                </div>
+                <small :id="`${fieldIds.aircraft}-help`">{{ aircraftHelpText }}</small>
+              </div>
+            </div>
+
+            <div v-show="activeStep === 2" class="contact-grid">
+              <div class="availability-field">
+                <label :for="fieldIds.name">{{ copy.nameLabel }}</label>
+                <input
+                  :id="fieldIds.name"
+                  v-model.trim="form.name"
+                  class="plain-input"
+                  type="text"
+                  autocomplete="name"
+                  required
+                />
+              </div>
+              <div class="availability-field">
+                <label :for="fieldIds.email">{{ copy.emailLabel }}</label>
+                <input
+                  :id="fieldIds.email"
+                  v-model.trim="form.email"
+                  class="plain-input"
+                  type="email"
+                  autocomplete="email"
+                  required
+                />
+              </div>
+              <div class="availability-field">
+                <label :for="fieldIds.phone">{{ copy.phoneLabel }}</label>
+                <input
+                  :id="fieldIds.phone"
+                  v-model.trim="form.phone"
+                  class="plain-input"
+                  type="tel"
+                  autocomplete="tel"
+                  required
+                />
+              </div>
+            </div>
+
+            <div v-show="activeStep === 3" class="review-panel" aria-live="polite">
+              <div>
+                <span>{{ copy.routeSummary }}</span>
+                <strong>{{ routeSummary }}</strong>
+              </div>
+              <div>
+                <span>{{ copy.aircraftLabel }}</span>
+                <strong>{{ selectedAircraftSummary }}</strong>
+              </div>
+              <div>
+                <span>{{ copy.contactSummary }}</span>
+                <strong>{{ form.name || "-" }} / {{ form.email || "-" }}</strong>
+              </div>
+            </div>
+
+            <p v-if="compactError" id="reservation-card-error" class="compact-error" role="alert">
+              {{ compactError }}
+            </p>
+
+            <button class="availability-submit" type="submit">
+              <span>{{ compactSubmitLabel }}</span>
+              <ChevronRight aria-hidden="true" />
+            </button>
+            <p id="reservation-card-note" class="availability-note">
+              <LockKeyhole aria-hidden="true" />
+              <span>{{ copy.secureNote }}</span>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      <section class="next-steps">
+        <div class="reservation-shell">
+          <div class="process-card">
+            <h2>{{ copy.nextTitle }}</h2>
+            <div class="process-grid">
+              <article v-for="item in copy.process" :key="item.title" class="process-item">
+                <span class="icon-ring">
+                  <component :is="item.icon" aria-hidden="true" />
+                </span>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+              </article>
             </div>
           </div>
 
-          <div class="quote-right">
-            <ReservationForm
-              :form="form"
-              :routes="routes"
-              :routeType="routeType"
-              :returnToBaseEnabled="returnToBaseEnabled"
-              :countries="countries"
-              :states="states"
-              :citiesByState="citiesByState"
-              :citiesByCountry="citiesByCountry"
-              :airportsByCity="airportsByCity"
-              :aircraftFleet="aircraftFleet"
-              :loading="loading"
-              :errorMessage="errorMessage"
-              :allowedAirportTypes="allowedAirportTypes"
-              :blockedDates="blockedDates"
-              :aircraftAvailability="aircraftAvailability"
-              :locale="currentLocale"
-              @update:routeType="routeType = $event"
-              @addRoute="addRoute"
-              @closeAtBase="closeAtBase"
-              @removeRoute="removeRoute"
-              @reopenRoutes="reopenRoutes"
-              @preview="submitForm"
-            />
+          <div class="trust-strip">
+            <article v-for="item in copy.trust" :key="item.title" class="trust-item">
+              <component :is="item.icon" aria-hidden="true" />
+              <div>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="why-grid">
+            <article class="why-card why-card--wide">
+              <div class="why-card__copy">
+                <h2>{{ copy.whyTitle }}</h2>
+                <p>{{ copy.whyDescription }}</p>
+                <ul>
+                  <li v-for="item in copy.whyBullets" :key="item">
+                    <CheckCircle2 aria-hidden="true" />
+                    <span>{{ item }}</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="why-card__media" aria-hidden="true"></div>
+            </article>
+
+            <article class="why-card proposal-card">
+              <span class="proposal-icon">
+                <Mail aria-hidden="true" />
+              </span>
+              <h2>{{ copy.proposalTitle }}</h2>
+              <p>{{ copy.proposalDescription }}</p>
+              <button class="proposal-button" type="button" @click="goToFullForm">
+                <span>{{ copy.readyCta }}</span>
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </article>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+    </div>
 
     <QuoteModal
       v-if="showQuoteModal"
@@ -72,10 +452,22 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { supabase } from "../supabase";
 import { useRoute, useRouter } from "vue-router";
-import Swal from "sweetalert2";
+import {
+  ArrowLeftRight,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  FileText,
+  Headphones,
+  LockKeyhole,
+  Mail,
+  PlaneTakeoff,
+  Radar,
+  ShieldCheck,
+  UsersRound,
+} from "lucide-vue-next";
 
 import MainLayout from "@/layouts/MainLayout.vue";
-import ReservationForm from "@/components/reservation/ReservationForm.vue";
 import QuoteModal from "@/components/reservation/QuoteModal.vue";
 import { generateReservationPDF } from "@/utils/pdfGenerator";
 
@@ -142,15 +534,217 @@ const isSpanish = computed(() => currentLocale.value === "es-mx");
 const copy = computed(() =>
   isSpanish.value
     ? {
-        subtitle: "Solicitud de reservación",
-        title: "Solicita una reservación de vuelo",
-        noAircraft: "No se seleccionó ninguna aeronave.",
+        heroEyebrow: "Aviacion privada. Disponibilidad real.",
+        heroTitle: "Solicita una reservacion de vuelo privado",
+        heroDescription:
+          "Comparte tus planes de viaje y nuestro equipo preparara una propuesta personalizada.",
+        selectFlightsTitle: "1. Selecciona tus vuelos",
+        tripTypeLabel: "Tipo de viaje",
+        oneWayLabel: "Solo ida",
+        roundTripLabel: "Redondo",
+        addFlightLabel: "Agregar otro vuelo",
+        returnFlightLabel: "Vuelo de regreso",
+        removeReturnLabel: "Quitar vuelo de regreso",
+        returnDateLabel: "Fecha de regreso",
+        steps: ["Tu itinerario", "Opciones de aeronave", "Tus datos", "Recibe propuesta"],
+        fromLabel: "Desde",
+        toLabel: "Hacia",
+        departureLabel: "Fecha de salida",
+        passengersLabel: "Pasajeros",
+        passenger: "Pasajero",
+        passengers: "Pasajeros",
+        passengerMeta: "Capacidad sujeta a aeronave",
+        selectAirport: "Selecciona aeropuerto",
+        aircraftLabel: "Aeronave",
+        selectAircraft: "Selecciona aeronave",
+        nameLabel: "Nombre completo",
+        emailLabel: "Correo",
+        phoneLabel: "Telefono",
+        routeSummary: "Ruta",
+        contactSummary: "Contacto",
+        continueCta: "Continuar",
+        searchAvailabilityCta: "Buscar disponibilidad",
+        sendProposalCta: "Revisar propuesta",
+        missingItinerary: "Selecciona origen, destino, fecha y pasajeros para continuar.",
+        missingReturn: "Completa el vuelo de regreso o cambia a solo ida.",
+        sameAirport: "El origen y destino deben ser diferentes.",
+        missingAircraft: "Selecciona una aeronave disponible.",
+        missingContact: "Completa nombre, correo y telefono.",
+        invalidEmail: "Ingresa un correo valido.",
+        aircraftHelpFallback: "Elige una aeronave para calcular disponibilidad y propuesta.",
+        swapLabel: "Intercambiar origen y destino",
+        checkAvailability: "Consultar disponibilidad",
+        secureNote: "Tu informacion es segura y confidencial.",
+        nextTitle: "Que pasa despues?",
+        process: [
+          {
+            icon: Radar,
+            title: "Verificamos disponibilidad",
+            description: "Nuestro equipo revisa disponibilidad real para tu ruta.",
+          },
+          {
+            icon: PlaneTakeoff,
+            title: "Preparamos opciones",
+            description: "Recibiras aeronaves que se ajustan a tu mision.",
+          },
+          {
+            icon: FileText,
+            title: "Enviamos tu propuesta",
+            description: "Una propuesta personalizada llega a tu correo en minutos.",
+          },
+          {
+            icon: ShieldCheck,
+            title: "Vuelas con confianza",
+            description: "Nuestro equipo acompana cada etapa del viaje.",
+          },
+        ],
+        trust: [
+          {
+            icon: CalendarDays,
+            title: "Disponibilidad real",
+            description: "Servicio concierge 24/7, 365 dias.",
+          },
+          {
+            icon: ShieldCheck,
+            title: "Seguridad primero",
+            description: "Altos estandares en cada operacion.",
+          },
+          {
+            icon: Headphones,
+            title: "Soporte experto",
+            description: "Asesoria de aviacion cuando la necesites.",
+          },
+          {
+            icon: LockKeyhole,
+            title: "Privacidad total",
+            description: "Tu informacion nunca se comparte ni vende.",
+          },
+        ],
+        whyTitle: "Por que volar con Sky Group?",
+        whyDescription:
+          "Con mas de 20 anos de experiencia, ofrecemos soluciones privadas con seguridad, servicio y eficiencia.",
+        whyBullets: [
+          "Acceso a mas de 50 aeronaves en Mexico y el mundo",
+          "Coordinacion on-demand de charter, manejo y mas",
+          "Operaciones 24/7 y servicio personalizado",
+          "Compania lider de aviacion privada en Mexico",
+        ],
+        proposalTitle: "Tu propuesta sera enviada directo a tu correo",
+        proposalDescription:
+          "Cuando verifiquemos disponibilidad, recibiras opciones de aeronave, detalles y precio privado.",
+        readyCta: "Estoy listo para volar",
+        formEyebrow: "Completa tu solicitud",
+        formTitle: "Detalles finales para preparar tu propuesta",
+        formDescription:
+          "El formulario conserva tu itinerario inicial y permite seleccionar aeronave, datos de contacto y rutas adicionales.",
+        noAircraft: "No se selecciono ninguna aeronave.",
         unavailableAircraft:
-          "Esta aeronave ya está reservada en el rango de tiempo seleccionado.",
+          "Esta aeronave ya esta reservada en el rango de tiempo seleccionado.",
       }
     : {
-        subtitle: "Reservation Request",
-        title: "Request a Flight Reservation",
+        heroEyebrow: "Private aviation. Real availability.",
+        heroTitle: "Request a Private Flight Reservation",
+        heroDescription:
+          "Tell us your travel plans and our team will prepare a personalized flight proposal.",
+        selectFlightsTitle: "1. Select your flights",
+        tripTypeLabel: "Trip type",
+        oneWayLabel: "One way",
+        roundTripLabel: "Round trip",
+        addFlightLabel: "Add another flight",
+        returnFlightLabel: "Return flight",
+        removeReturnLabel: "Remove return flight",
+        returnDateLabel: "Return date",
+        steps: ["Your itinerary", "Aircraft options", "Your details", "Receive proposal"],
+        fromLabel: "From",
+        toLabel: "To",
+        departureLabel: "Departure date",
+        passengersLabel: "Passengers",
+        passenger: "Passenger",
+        passengers: "Passengers",
+        passengerMeta: "Capacity depends on aircraft",
+        selectAirport: "Select airport",
+        aircraftLabel: "Aircraft",
+        selectAircraft: "Select aircraft",
+        nameLabel: "Full name",
+        emailLabel: "Email",
+        phoneLabel: "Phone",
+        routeSummary: "Route",
+        contactSummary: "Contact",
+        continueCta: "Continue",
+        searchAvailabilityCta: "Search availability",
+        sendProposalCta: "Review proposal",
+        missingItinerary: "Select origin, destination, date, and passengers to continue.",
+        missingReturn: "Complete the return flight or switch to one way.",
+        sameAirport: "Origin and destination must be different.",
+        missingAircraft: "Select an available aircraft.",
+        missingContact: "Complete your name, email, and phone.",
+        invalidEmail: "Enter a valid email address.",
+        aircraftHelpFallback: "Choose an aircraft to calculate availability and proposal.",
+        swapLabel: "Swap origin and destination",
+        checkAvailability: "Check availability",
+        secureNote: "Your information is secure and confidential.",
+        nextTitle: "What happens next?",
+        process: [
+          {
+            icon: Radar,
+            title: "We verify availability",
+            description: "Our team checks real-time availability for your route.",
+          },
+          {
+            icon: PlaneTakeoff,
+            title: "We prepare your options",
+            description: "You will receive aircraft options for your mission.",
+          },
+          {
+            icon: FileText,
+            title: "We send your proposal",
+            description: "A personalized quote will be emailed within minutes.",
+          },
+          {
+            icon: ShieldCheck,
+            title: "You fly with confidence",
+            description: "Our team is with you every step of the way.",
+          },
+        ],
+        trust: [
+          {
+            icon: CalendarDays,
+            title: "Real Availability",
+            description: "Live access to our fleet 24/7, 365 days.",
+          },
+          {
+            icon: ShieldCheck,
+            title: "Safety First",
+            description: "Highest safety standards in every operation.",
+          },
+          {
+            icon: Headphones,
+            title: "Expert Support",
+            description: "Aviation advisors available whenever you need us.",
+          },
+          {
+            icon: LockKeyhole,
+            title: "Total Privacy",
+            description: "Your information is never shared or sold.",
+          },
+        ],
+        whyTitle: "Why fly with Sky Group?",
+        whyDescription:
+          "With over 20 years of experience, we provide private aviation solutions tailored to your needs with safety, service, and efficiency.",
+        whyBullets: [
+          "Access to 50+ aircraft across Mexico and worldwide",
+          "On-demand charter, aircraft management and more",
+          "24/7 operations and personalized service",
+          "Mexico's leading private aviation company",
+        ],
+        proposalTitle: "Your proposal will be sent directly to your inbox",
+        proposalDescription:
+          "Once we verify availability, you will receive a personalized flight proposal with aircraft options, details, and a private quote.",
+        readyCta: "I'm ready to fly",
+        formEyebrow: "Complete your request",
+        formTitle: "Final details to prepare your proposal",
+        formDescription:
+          "Your initial itinerary is preserved below. Choose an aircraft, add contact details, and request your private proposal.",
         noAircraft: "No aircraft selected.",
         unavailableAircraft:
           "This aircraft is already reserved in that time range.",
@@ -160,9 +754,26 @@ const copy = computed(() =>
 const showQuoteModal = ref(false);
 const loading = ref(false);
 const errorMessage = ref("");
+const compactError = ref("");
+const activeStep = ref(0);
+const tripMode = ref("one-way");
 const routeType = ref("NATIONAL");
 const aircraftAvailability = ref(true);
 const returnToBaseEnabled = ref(false);
+const fieldIds = {
+  from: "reservation-from-airport",
+  to: "reservation-to-airport",
+  date: "reservation-departure-date",
+  passengers: "reservation-passengers",
+  returnFrom: "reservation-return-from-airport",
+  returnTo: "reservation-return-to-airport",
+  returnDate: "reservation-return-date",
+  returnPassengers: "reservation-return-passengers",
+  aircraft: "reservation-aircraft",
+  name: "reservation-name",
+  email: "reservation-email",
+  phone: "reservation-phone",
+};
 
 const norm = (value) =>
   (value || "")
@@ -373,6 +984,405 @@ const validAirports = computed(() => {
     ? allAirports.value.filter((airport) => airport.source === "NATIONAL")
     : allAirports.value.filter((airport) => airport.source === "INTERNATIONAL");
 });
+
+const compactAirportOptions = computed(() =>
+  validAirports.value
+    .filter((airport) => getAirportOptionValue(airport))
+    .slice()
+    .sort((left, right) =>
+      `${left.ciudad} ${getAirportOptionValue(left)}`.localeCompare(
+        `${right.ciudad} ${getAirportOptionValue(right)}`,
+      ),
+    ),
+);
+
+const minDateTime = computed(() => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  return now.toISOString().slice(0, 16);
+});
+
+const findCompactAirport = (airportCode) =>
+  allAirports.value.find(
+    (airport) => norm(getAirportOptionValue(airport)) === norm(airportCode),
+  );
+
+const getCompactAirportMeta = (airportCode) => {
+  const airport = findCompactAirport(airportCode);
+  if (!airport) return isSpanish.value ? "Selecciona aeropuerto" : "Select airport";
+  return [airport.aeropuerto, airport.estado || airport.country]
+    .filter(Boolean)
+    .join(", ");
+};
+
+const compactFromMeta = computed(() =>
+  getCompactAirportMeta(routes.value[0]?.fromAirport),
+);
+const compactToMeta = computed(() =>
+  getCompactAirportMeta(routes.value[0]?.toAirport),
+);
+const hasReturnFlight = computed(() => tripMode.value === "round-trip" && routes.value.length > 1);
+const returnRoute = computed(() => routes.value[1] || emptyRoute());
+
+const returnFromMeta = computed(() =>
+  getCompactAirportMeta(returnRoute.value?.fromAirport),
+);
+const returnToMeta = computed(() =>
+  getCompactAirportMeta(returnRoute.value?.toAirport),
+);
+const compactDateMeta = computed(() => {
+  const value = routes.value[0]?.start_date;
+  if (!value) return isSpanish.value ? "Selecciona fecha" : "Select date";
+
+  return new Intl.DateTimeFormat(isSpanish.value ? "es-MX" : "en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+});
+const returnDateMeta = computed(() => {
+  const value = returnRoute.value?.start_date;
+  if (!value) return isSpanish.value ? "Selecciona fecha" : "Select date";
+
+  return new Intl.DateTimeFormat(isSpanish.value ? "es-MX" : "en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+});
+
+const compactAircraftOptions = computed(() => {
+  const passengers = toNumber(routes.value[0]?.passengers, 1);
+  const seen = new Set();
+
+  return aircraftFleet.value
+    .filter((aircraft) => toNumber(aircraft.capacity_passengers, 0) >= passengers)
+    .filter((aircraft) => {
+      const key = [
+        norm(aircraft.name),
+        toNumber(aircraft.capacity_passengers, 0),
+      ].join("|");
+
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice()
+    .sort((left, right) =>
+      String(left.name || "").localeCompare(String(right.name || "")),
+    );
+});
+
+const selectedAircraft = computed(() => getAircraftById(routes.value[0]?.aircraft_id));
+
+const aircraftHelpText = computed(() => {
+  const aircraft = selectedAircraft.value;
+  if (!aircraft) return copy.value.aircraftHelpFallback;
+  return [
+    aircraft.aircraft_type || aircraft.type,
+    `${aircraft.capacity_passengers || "-"} pax`,
+    aircraft.home_base || aircraft.base,
+  ]
+    .filter(Boolean)
+    .join(" / ");
+});
+
+const selectedAircraftSummary = computed(() =>
+  selectedAircraft.value
+    ? `${selectedAircraft.value.name} (${selectedAircraft.value.capacity_passengers || "-"} pax)`
+    : "-",
+);
+
+const routeSummary = computed(() => {
+  const routeItem = routes.value[0] || {};
+  return `${routeItem.fromAirport || "-"} -> ${routeItem.toAirport || "-"} / ${routeItem.passengers || 1} ${copy.value.passengers}`;
+});
+
+const maxReachableStep = computed(() => {
+  if (!isItineraryComplete.value) return 0;
+  if (!routes.value[0]?.aircraft_id) return 1;
+  if (!isContactComplete.value) return 2;
+  return 3;
+});
+
+const compactSubmitLabel = computed(() =>
+  activeStep.value === 0
+    ? copy.value.searchAvailabilityCta
+    : activeStep.value === 3
+      ? copy.value.sendProposalCta
+      : copy.value.continueCta,
+);
+
+const isItineraryComplete = computed(() => {
+  const routeItem = routes.value[0] || {};
+  return Boolean(
+    routeItem.fromAirport &&
+      routeItem.toAirport &&
+      norm(routeItem.fromAirport) !== norm(routeItem.toAirport) &&
+      routeItem.start_date &&
+      toNumber(routeItem.passengers) > 0,
+  );
+});
+
+const isContactComplete = computed(() =>
+  Boolean(form.name && form.email && form.phone),
+);
+
+const passengerOptions = computed(() => {
+  const capacity = toNumber(getAircraftById(routes.value[0]?.aircraft_id)?.capacity_passengers, 8);
+  return Array.from({ length: Math.max(1, Math.min(capacity, 12)) }, (_, index) => index + 1);
+});
+
+const assignAirportToRoute = (direction, airport) => {
+  if (!airport) return;
+
+  const prefix = direction === "from" ? "from" : "to";
+  const target = routes.value[0];
+  target[`${prefix}Airport`] = getAirportOptionValue(airport);
+  target[`${prefix}City`] = airport.ciudad || "";
+  target[`${prefix}State`] = airport.estado || "";
+  target[`${prefix}Country`] = airport.country || "";
+};
+
+const assignAirportToSpecificRoute = (routeItem, direction, airport) => {
+  if (!routeItem || !airport) return;
+
+  const prefix = direction === "from" ? "from" : "to";
+  routeItem[`${prefix}Airport`] = getAirportOptionValue(airport);
+  routeItem[`${prefix}City`] = airport.ciudad || "";
+  routeItem[`${prefix}State`] = airport.estado || "";
+  routeItem[`${prefix}Country`] = airport.country || "";
+};
+
+const setCompactAirport = (direction) => {
+  const routeItem = routes.value[0];
+  const code = direction === "from" ? routeItem.fromAirport : routeItem.toAirport;
+  assignAirportToRoute(direction, findCompactAirport(code));
+  compactError.value = "";
+  if (tripMode.value === "round-trip") {
+    syncReturnRouteFromOutbound();
+  }
+};
+
+const setReturnAirport = (direction) => {
+  const routeItem = returnRoute.value;
+  const code = direction === "from" ? routeItem.fromAirport : routeItem.toAirport;
+  assignAirportToSpecificRoute(routeItem, direction, findCompactAirport(code));
+  compactError.value = "";
+};
+
+const swapCompactRoute = () => {
+  const routeItem = routes.value[0];
+  const from = {
+    airport: routeItem.fromAirport,
+    city: routeItem.fromCity,
+    state: routeItem.fromState,
+    country: routeItem.fromCountry,
+  };
+
+  routeItem.fromAirport = routeItem.toAirport;
+  routeItem.fromCity = routeItem.toCity;
+  routeItem.fromState = routeItem.toState;
+  routeItem.fromCountry = routeItem.toCountry;
+  routeItem.toAirport = from.airport;
+  routeItem.toCity = from.city;
+  routeItem.toState = from.state;
+  routeItem.toCountry = from.country;
+  compactError.value = "";
+  if (tripMode.value === "round-trip") {
+    syncReturnRouteFromOutbound();
+  }
+};
+
+const swapReturnRoute = () => {
+  const routeItem = returnRoute.value;
+  const from = {
+    airport: routeItem.fromAirport,
+    city: routeItem.fromCity,
+    state: routeItem.fromState,
+    country: routeItem.fromCountry,
+  };
+
+  routeItem.fromAirport = routeItem.toAirport;
+  routeItem.fromCity = routeItem.toCity;
+  routeItem.fromState = routeItem.toState;
+  routeItem.fromCountry = routeItem.toCountry;
+  routeItem.toAirport = from.airport;
+  routeItem.toCity = from.city;
+  routeItem.toState = from.state;
+  routeItem.toCountry = from.country;
+  compactError.value = "";
+};
+
+const goToFullForm = () => {
+  form.flightType ||= "Private Jet";
+};
+
+const addCompactFlight = () => {
+  tripMode.value = "round-trip";
+  compactError.value = "";
+
+  if (routes.value.length <= 1) {
+    routes.value.push({
+      id: Date.now() + Math.random(),
+      ...emptyRoute(),
+    });
+  }
+
+  syncReturnRouteFromOutbound();
+};
+
+const syncReturnRouteFromOutbound = () => {
+  const outbound = routes.value[0];
+  const inbound = routes.value[1];
+  if (!inbound) return;
+
+  assignAirportToSpecificRoute(inbound, "from", findCompactAirport(outbound.toAirport));
+  assignAirportToSpecificRoute(inbound, "to", findCompactAirport(outbound.fromAirport));
+  inbound.passengers = outbound.passengers || 1;
+  inbound.aircraft_id = outbound.aircraft_id || null;
+
+  if (!inbound.start_date && outbound.start_date) {
+    const date = new Date(outbound.start_date);
+    date.setDate(date.getDate() + 2);
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    inbound.start_date = date.toISOString().slice(0, 16);
+  }
+
+  syncReturnEndDate();
+};
+
+const setTripMode = (mode) => {
+  tripMode.value = mode;
+  compactError.value = "";
+
+  if (mode === "one-way" && routes.value.length > 1) {
+    routes.value = [routes.value[0]];
+  }
+};
+
+const removeReturnFlight = () => {
+  if (routes.value.length > 1) {
+    routes.value = [routes.value[0]];
+  }
+  compactError.value = "";
+};
+
+const syncCompactEndDate = () => {
+  const routeItem = routes.value[0];
+  if (!routeItem?.start_date) return;
+  routeItem.end_date = routeItem.end_date && routeItem.end_date >= routeItem.start_date
+    ? routeItem.end_date
+    : routeItem.start_date;
+  compactError.value = "";
+};
+
+const onOutboundDateChange = () => {
+  syncCompactEndDate();
+  if (hasReturnFlight.value) {
+    syncReturnRouteFromOutbound();
+  }
+};
+
+const syncReturnEndDate = () => {
+  const routeItem = returnRoute.value;
+  if (!routeItem?.start_date) return;
+  routeItem.end_date = routeItem.start_date;
+};
+
+const validateCompactStep = (step = activeStep.value) => {
+  compactError.value = "";
+
+  if (step === 0) {
+    const routeItem = routes.value[0] || {};
+    if (!routeItem.fromAirport || !routeItem.toAirport || !routeItem.start_date || !routeItem.passengers) {
+      compactError.value = copy.value.missingItinerary;
+      return false;
+    }
+    if (norm(routeItem.fromAirport) === norm(routeItem.toAirport)) {
+      compactError.value = copy.value.sameAirport;
+      return false;
+    }
+    if (hasReturnFlight.value) {
+      const inbound = returnRoute.value || {};
+      if (!inbound.fromAirport || !inbound.toAirport || !inbound.start_date || !inbound.passengers) {
+        compactError.value = copy.value.missingReturn;
+        return false;
+      }
+      if (norm(inbound.fromAirport) === norm(inbound.toAirport)) {
+        compactError.value = copy.value.sameAirport;
+        return false;
+      }
+      syncReturnEndDate();
+    }
+    syncCompactEndDate();
+  }
+
+  if (step === 1 && !routes.value[0]?.aircraft_id) {
+    compactError.value = copy.value.missingAircraft;
+    return false;
+  }
+
+  if (step === 2) {
+    if (!isContactComplete.value) {
+      compactError.value = copy.value.missingContact;
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      compactError.value = copy.value.invalidEmail;
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const goToStep = (step) => {
+  if (step > maxReachableStep.value) return;
+  activeStep.value = step;
+  compactError.value = "";
+};
+
+const handleCompactSubmit = () => {
+  goToFullForm();
+
+  if (!validateCompactStep()) return;
+
+  if (activeStep.value < 3) {
+    activeStep.value += 1;
+    return;
+  }
+
+  if (!validateCompactStep(0) || !validateCompactStep(1) || !validateCompactStep(2)) {
+    activeStep.value = Math.min(activeStep.value, maxReachableStep.value);
+    return;
+  }
+
+  submitForm();
+  if (errorMessage.value) {
+    compactError.value = errorMessage.value;
+  }
+};
+
+const applyDefaultRouteSelection = () => {
+  if (!routes.value[0] || routes.value[0].fromAirport || routes.value[0].toAirport) {
+    return;
+  }
+
+  const findByCode = (code) =>
+    validAirports.value.find(
+      (airport) => norm(getAirportOptionValue(airport)) === norm(code),
+    );
+
+  const from = findByCode("TLC") || validAirports.value[0];
+  const to =
+    findByCode("CUN") ||
+    validAirports.value.find((airport) => norm(airport.ciudad).includes("CANCUN")) ||
+    validAirports.value[1];
+
+  assignAirportToRoute("from", from);
+  assignAirportToRoute("to", to);
+};
 
 const airportsByCity = (country, state, city) => {
   if (!city) return [];
@@ -1430,236 +2440,811 @@ watch(
 );
 </script>
 
-<style>
-.quote {
-  position: relative;
+<style scoped>
+.reservation-landing {
+  --bg: #060b0f;
+  --panel: rgba(8, 14, 18, 0.92);
+  --panel-soft: rgba(13, 22, 28, 0.9);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(210, 168, 89, 0.28);
+  --text: #f8f4ec;
+  --muted: rgba(248, 244, 236, 0.68);
+  --gold: #d4a64f;
+  --gold-2: #f0c875;
   min-height: 100vh;
-  overflow: hidden;
-  padding-top: var(--header-height);
-  padding-bottom: 80px;
-  background: #000;
+  background: #05090d;
+  color: var(--text);
 }
 
-.hero-bg {
+.reservation-shell {
+  width: min(1240px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.reservation-hero {
+  position: relative;
+  min-height: 720px;
+  overflow: hidden;
+  padding-top: 132px;
+}
+
+.reservation-hero__image,
+.reservation-hero__shade {
   position: absolute;
   inset: 0;
+}
+
+.reservation-hero__image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 0;
+  object-position: center 42%;
 }
 
-.quote-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.75));
-  z-index: 1;
+.reservation-hero__shade {
+  background:
+    linear-gradient(90deg, rgba(5, 9, 13, 0.9) 0%, rgba(5, 9, 13, 0.58) 42%, rgba(5, 9, 13, 0.14) 100%),
+    linear-gradient(180deg, rgba(5, 9, 13, 0.18), rgba(5, 9, 13, 0.28) 44%, rgba(5, 9, 13, 0.72) 100%);
 }
 
-.quote-content {
+.reservation-hero__content {
   position: relative;
-  z-index: 2;
-  padding-top: 60px;
+  z-index: 1;
+  display: grid;
+  align-content: end;
+  min-height: 588px;
+  padding-bottom: 48px;
 }
 
-.quote-grid {
+.reservation-copy {
+  display: block;
+  max-width: 520px;
+  padding-bottom: 54px;
+}
+
+.reservation-kicker {
+  margin: 0 0 10px;
+  color: var(--gold-2);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.reservation-copy h1,
+.full-request__copy h2 {
+  margin: 0;
+  font-size: clamp(2.1rem, 4vw, 3.55rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+}
+
+.reservation-copy > p:last-child,
+.full-request__copy > p {
+  max-width: 460px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.availability-card,
+.process-card,
+.trust-strip,
+.why-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(7, 13, 17, 0.68), rgba(4, 9, 12, 0.58));
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(8px);
+}
+
+.availability-card {
+  background:
+    linear-gradient(180deg, rgba(7, 13, 17, 0.66), rgba(4, 9, 12, 0.52));
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 30px 34px 26px;
+}
+
+.flight-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.flight-card-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.trip-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 340px;
+  min-height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.trip-toggle__button,
+.add-flight-button {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.trip-toggle__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 18px;
+}
+
+.trip-toggle__button + .trip-toggle__button {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.trip-toggle__button.active {
+  background: linear-gradient(135deg, #d7aa5a, #edc879);
+  color: #11100d;
+}
+
+.trip-toggle__button:focus-visible,
+.add-flight-button:focus-visible {
+  outline: 2px solid rgba(240, 200, 117, 0.9);
+  outline-offset: 2px;
+}
+
+.steps {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3.5rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 26px;
+  margin-bottom: 34px;
+  padding: 0 72px;
+}
+
+.step {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  border: 0;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+.step:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--gold-2);
+  outline-offset: 8px;
+  border-radius: 8px;
+}
+
+.step::after {
+  content: "";
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 24px);
+  width: calc(100% - 48px);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.step:last-child::after {
+  display: none;
+}
+
+.step span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #111920;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.step small {
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.step--active {
+  color: var(--gold);
+}
+
+.step--active span,
+.step--complete span {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: #11100d;
+}
+
+.step--complete {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.availability-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) 42px minmax(190px, 1fr) minmax(250px, 1.3fr) minmax(230px, 1.12fr);
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 22px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.availability-grid--return {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.return-flight-block {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.return-flight-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.return-flight-title span {
+  color: var(--gold-2);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.remove-return-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.remove-return-button:focus-visible {
+  outline: 2px solid rgba(240, 200, 117, 0.9);
+  outline-offset: 2px;
+}
+
+.availability-field {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+}
+
+.availability-field label {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.field-control {
+  position: relative;
+  min-width: 0;
+}
+
+.field-control > svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  color: #ffffff;
+  opacity: 0.92;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.availability-field select,
+.availability-field input,
+.plain-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #ffffff;
+  padding: 0 42px 0 46px;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.availability-field input[type="datetime-local"] {
+  padding-right: 14px;
+  font-size: 0.82rem;
+  letter-spacing: 0;
+}
+
+.plain-input {
+  padding: 0 16px;
+}
+
+.availability-field select:focus,
+.availability-field input:focus,
+.plain-input:focus {
+  outline: 2px solid rgba(240, 200, 117, 0.82);
+  outline-offset: 2px;
+  border-color: rgba(240, 200, 117, 0.72);
+}
+
+.availability-field option {
+  background: #101820;
+  color: #ffffff;
+}
+
+.availability-field small,
+.availability-note {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.72rem;
+}
+
+.availability-field small {
+  display: block;
+  min-height: 34px;
+  max-width: 230px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.22;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.step-panel,
+.contact-grid,
+.review-panel {
+  max-width: 820px;
+  margin: 8px auto 0;
+}
+
+.step-panel {
+  display: grid;
+}
+
+.availability-field--wide {
+  max-width: 620px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.review-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.review-panel > div {
+  min-height: 72px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.review-panel span,
+.review-panel strong {
+  display: block;
+}
+
+.review-panel span {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.review-panel strong {
+  margin-top: 8px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.compact-error {
+  max-width: 620px;
+  margin: 14px auto 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 119, 119, 0.36);
+  border-radius: 6px;
+  background: rgba(130, 29, 29, 0.2);
+  color: #ffd0d0;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.swap-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-top: 36px;
+  margin-bottom: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--gold);
+  cursor: pointer;
+}
+
+.swap-button svg,
+.availability-submit svg,
+.proposal-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.availability-submit,
+.proposal-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #d7aa5a, #edc879);
+  color: #11100d;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.availability-submit {
+  width: min(100%, 480px);
+  min-height: 50px;
+  margin: 22px auto 0;
+  display: flex;
+  font-size: 0.82rem;
+}
+
+.add-flight-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 42px;
+  margin-top: 16px;
+  padding: 0 18px;
+  border: 1px solid rgba(212, 166, 79, 0.7);
+  border-radius: 4px;
+  color: var(--gold-2);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.availability-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 18px 0 0;
+}
+
+.availability-note svg {
+  width: 12px;
+  height: 12px;
+}
+
+.next-steps {
+  padding: 26px 0 70px;
+}
+
+.process-card {
+  padding: 28px 30px;
+}
+
+.process-card h2,
+.why-card h2 {
+  margin: 0;
+  font-size: 1.18rem;
+}
+
+.process-grid,
+.trust-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.process-grid {
+  margin-top: 22px;
+}
+
+.process-item {
+  position: relative;
+  text-align: center;
+}
+
+.icon-ring,
+.proposal-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--gold);
+}
+
+.icon-ring svg,
+.proposal-icon svg,
+.trust-item > svg,
+.why-card li svg {
+  width: 20px;
+  height: 20px;
+}
+
+.process-item h3,
+.trust-item h3 {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+}
+
+.process-item p,
+.trust-item p,
+.why-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.trust-strip {
+  margin-top: 18px;
+  padding: 22px;
+}
+
+.trust-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
 }
 
-.quote-left {
-  display: flex;
-  align-items: flex-start;
-  padding-top: 80px;
+.trust-item > svg {
+  color: var(--gold);
 }
 
-.quote-header h5.subtitle {
-  font-size: 0.7rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #cfcfcf;
-  margin-bottom: 0.5rem;
-}
-
-.quote-header h2 {
-  font-size: 2.4rem;
-  font-weight: 300;
-  color: #fff;
-  margin-bottom: 0.8rem;
-  line-height: 1.2;
-}
-
-.form-row {
+.why-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.6rem;
-  margin-bottom: 1.4rem;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  gap: 18px;
+  margin-top: 18px;
 }
 
-.form-group {
+.why-card {
+  min-height: 290px;
+  padding: 34px;
+}
+
+.why-card--wide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 32%);
+  gap: 22px;
+  padding: 0 0 0 34px;
+  background: linear-gradient(180deg, rgba(7, 13, 17, 0.74), rgba(4, 9, 12, 0.64));
+  overflow: hidden;
+}
+
+.why-card__copy {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  padding: 28px 0;
+}
+
+.why-card__media {
+  min-height: 100%;
+  align-self: stretch;
+  background:
+    linear-gradient(90deg, rgba(4, 9, 12, 0.18), transparent 34%),
+    url("/images/reserva/2.jpg") 72% center / cover no-repeat;
+  border-radius: 0 8px 8px 0;
+}
+
+.why-card p {
+  max-width: 520px;
+  margin-top: 12px;
+}
+
+.why-card ul {
+  display: grid;
+  gap: 9px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.why-card li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.82rem;
+}
+
+.why-card li svg {
+  color: var(--gold);
+}
+
+.proposal-card {
   display: flex;
   flex-direction: column;
+  justify-content: center;
 }
 
-.form-group.full {
-  grid-column: span 2;
+.proposal-icon {
+  margin: 0 0 18px;
 }
 
-label {
-  font-size: 0.65rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-bottom: 0.35rem;
-  color: #444;
+.proposal-button {
+  align-self: stretch;
+  margin-top: 24px;
+  background: transparent;
+  color: var(--gold-2);
+  border: 1px solid var(--line-strong);
 }
 
-input,
-select,
-textarea {
-  padding: 0.7rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 0.85rem;
-  background: #fff;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.12);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #0d6efd, #003eaa);
-  color: #fff;
-  padding: 0.75rem 1.4rem;
-  border-radius: 5px;
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.35);
-}
-
-.btn-secondary {
-  margin-top: 1rem;
-  margin-bottom: 1.5rem;
-  background: #f1f3f5;
-  color: #333;
-  padding: 0.65rem 1.2rem;
-  border-radius: 5px;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border: 1px dashed #ccc;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background: #e9ecef;
-  border-color: #0d6efd;
-  color: #0d6efd;
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 18, 32, 0.85);
-  backdrop-filter: blur(6px);
-  z-index: 9999;
-  display: flex;
-}
-
-.modal-card {
-  width: 100vw;
-  height: 100vh;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-}
-
-@media (max-width: 992px) {
-  .quote-grid {
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
+@media (max-width: 1180px) {
+  .flight-card-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .quote-right {
-    justify-content: center;
-    padding-top: 0;
+  .trip-toggle {
+    width: min(100%, 340px);
+    min-width: 0;
   }
 
-  .quote-left {
-    padding-top: 40px;
-    text-align: center;
-    justify-content: center;
+  .availability-grid {
+    grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr);
+  }
+
+  .availability-field:nth-of-type(3),
+  .availability-field:nth-of-type(4) {
+    grid-column: span 1;
+  }
+
+  .availability-submit {
+    margin-top: 24px;
   }
 }
 
-@media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: 1fr !important;
-  }
-
-  .form-group.full {
-    grid-column: span 1 !important;
-  }
-
-  input,
-  select,
-  textarea {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .quote-grid {
+@media (max-width: 1040px) {
+  .availability-grid,
+  .process-grid,
+  .trust-strip,
+  .why-grid,
+  .contact-grid,
+  .review-panel {
     grid-template-columns: 1fr;
   }
 
-  .quote-right {
-    display: block;
-    padding-top: 0;
+  .swap-button {
+    margin: 0;
+    justify-self: start;
   }
 
-  .quote-form {
+  .step::after {
+    display: none;
+  }
+
+}
+
+@media (max-width: 720px) {
+  .reservation-shell {
+    width: min(100% - 28px, 1120px);
+  }
+
+  .reservation-hero {
+    min-height: auto;
+    padding-top: 112px;
+  }
+
+  .reservation-hero__content {
+    min-height: auto;
+    padding-bottom: 32px;
+  }
+
+  .reservation-copy {
+    padding-bottom: 34px;
+  }
+
+  .steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    padding: 0;
+  }
+
+  .trip-toggle {
     width: 100%;
-    max-width: 380px;
-    margin: 0 auto;
   }
 
-  .container {
-    padding-left: 15px !important;
-    padding-right: 15px !important;
+  .availability-card,
+  .process-card,
+  .trust-strip,
+  .why-card {
+    padding: 22px 18px;
   }
 
-  .container.quote-content {
-    max-width: 100% !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+  .availability-field small {
+    max-width: none;
+    min-height: auto;
   }
 
-  .quote-content {
-    padding-left: 15px;
-    padding-right: 15px;
+  .why-card--wide {
+    grid-template-columns: 1fr;
+    padding: 22px 18px;
   }
+
+  .why-card__media {
+    min-height: 180px;
+    border-radius: 8px;
+  }
+
 }
 </style>
