@@ -31,21 +31,18 @@
         <h3>{{ lookbook.title }}</h3>
         <p class="lookbook-card__aircraft">{{ lookbook.aircraft_name || "Private Aircraft" }}</p>
         <p class="lookbook-card__description">
-          {{ lookbook.description || "Documentacion exclusiva de aeronaves." }}
+          {{ lookbook.description || "Documentación exclusiva de aeronaves." }}
         </p>
       </div>
 
       <div class="lookbook-card__actions">
-        <button type="button" class="lookbook-card__button lookbook-card__button--ghost" @click="$emit('preview')">
-          Vista previa
-        </button>
         <button
           type="button"
           class="lookbook-card__button lookbook-card__button--primary"
           :disabled="downloading"
           @click="$emit('download')"
         >
-          {{ downloading ? "Descargando..." : "Descargar eBook" }}
+          {{ downloading ? "Procesando..." : "Descargar guía" }}
         </button>
       </div>
     </div>
@@ -67,7 +64,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(["preview", "download"]);
+defineEmits(["download"]);
 
 const imageFailed = ref(false);
 
@@ -226,12 +223,6 @@ watch(
 .lookbook-card__button:disabled {
   cursor: wait;
   opacity: 0.7;
-}
-
-.lookbook-card__button--ghost {
-  border-color: rgba(8, 26, 42, 0.12);
-  background: #ffffff;
-  color: #081a2a;
 }
 
 .lookbook-card__button--primary {

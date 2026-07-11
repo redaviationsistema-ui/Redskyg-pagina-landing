@@ -129,13 +129,16 @@
                 <label :for="fieldIds.date">{{ copy.departureLabel }}</label>
                 <div
                   class="field-control field-control--picker"
+                  @click="openDatePicker(departureDateInputRef)"
                 >
                   <CalendarDays aria-hidden="true" />
                   <button
                     type="button"
                     class="field-control__overlay"
                     :aria-label="copy.departureLabel"
-                    @click="openDatePicker(departureDateInputRef)"
+                    @click.stop="openDatePicker(departureDateInputRef)"
+                    @keydown.enter.prevent="openDatePicker(departureDateInputRef)"
+                    @keydown.space.prevent="openDatePicker(departureDateInputRef)"
                   ></button>
                   <input
                     ref="departureDateInputRef"
@@ -170,14 +173,19 @@
               </div>
             </div>
 
-            <div v-if="activeStep === 0 && hasReturnFlight" class="return-flight-block">
+            <template v-if="activeStep === 0 && hasReturnFlight">
+            <div
+              v-for="(extraRoute, extraIndex) in routes.slice(1)"
+              :key="extraRoute.id || `extra-route-${extraIndex}`"
+              class="return-flight-block"
+            >
               <div class="return-flight-title">
-                <span>{{ copy.returnFlightLabel }}</span>
+                <span>{{ getExtraRouteTitle(extraIndex) }}</span>
                 <button
                   class="remove-return-button"
                   type="button"
                   :aria-label="copy.removeReturnLabel"
-                  @click="removeReturnFlight"
+                  @click="removeExtraFlight(extraIndex + 1)"
                 >
                   ×
                 </button>
@@ -185,14 +193,14 @@
 
               <div class="availability-grid availability-grid--return">
                 <div class="availability-field">
-                  <label :for="fieldIds.returnFrom">{{ copy.fromLabel }}</label>
+                  <label :for="`${fieldIds.returnFrom}-${extraIndex}`">{{ copy.fromLabel }}</label>
                   <div class="field-control">
                     <PlaneTakeoff aria-hidden="true" />
                     <select
-                      :id="fieldIds.returnFrom"
-                      v-model="returnRoute.fromAirport"
+                      :id="`${fieldIds.returnFrom}-${extraIndex}`"
+                      v-model="extraRoute.fromAirport"
                       required
-                      @change="setReturnAirport('from')"
+                      @change="setExtraAirport(extraIndex + 1, 'from')"
                     >
                       <option value="">{{ copy.selectAirport }}</option>
                       <option
@@ -204,27 +212,27 @@
                       </option>
                     </select>
                   </div>
-                  <small>{{ returnFromMeta }}</small>
+                  <small>{{ getCompactAirportMeta(extraRoute.fromAirport) }}</small>
                 </div>
 
                 <button
                   class="swap-button"
                   type="button"
                   :aria-label="copy.swapLabel"
-                  @click="swapReturnRoute"
+                  @click="swapExtraRoute(extraIndex + 1)"
                 >
                   <ArrowLeftRight aria-hidden="true" />
                 </button>
 
                 <div class="availability-field">
-                  <label :for="fieldIds.returnTo">{{ copy.toLabel }}</label>
+                  <label :for="`${fieldIds.returnTo}-${extraIndex}`">{{ copy.toLabel }}</label>
                   <div class="field-control">
                     <PlaneTakeoff aria-hidden="true" />
                     <select
-                      :id="fieldIds.returnTo"
-                      v-model="returnRoute.toAirport"
+                      :id="`${fieldIds.returnTo}-${extraIndex}`"
+                      v-model="extraRoute.toAirport"
                       required
-                      @change="setReturnAirport('to')"
+                      @change="setExtraAirport(extraIndex + 1, 'to')"
                     >
                       <option value="">{{ copy.selectAirport }}</option>
                       <option
@@ -236,41 +244,46 @@
                       </option>
                     </select>
                   </div>
-                  <small>{{ returnToMeta }}</small>
+                  <small>{{ getCompactAirportMeta(extraRoute.toAirport) }}</small>
                 </div>
 
                 <div class="availability-field">
-                  <label :for="fieldIds.returnDate">{{ copy.returnDateLabel }}</label>
+                  <label :for="`${fieldIds.returnDate}-${extraIndex}`">
+                    {{ extraIndex === 0 ? copy.returnDateLabel : copy.departureLabel }}
+                  </label>
                   <div
                     class="field-control field-control--picker"
+                    @click="openDatePicker(extraRouteDateInputRefs[extraIndex + 1])"
                   >
                     <CalendarDays aria-hidden="true" />
                     <button
                       type="button"
                       class="field-control__overlay"
-                      :aria-label="copy.returnDateLabel"
-                      @click="openDatePicker(returnDateInputRef)"
+                      :aria-label="extraIndex === 0 ? copy.returnDateLabel : copy.departureLabel"
+                      @click.stop="openDatePicker(extraRouteDateInputRefs[extraIndex + 1])"
+                      @keydown.enter.prevent="openDatePicker(extraRouteDateInputRefs[extraIndex + 1])"
+                      @keydown.space.prevent="openDatePicker(extraRouteDateInputRefs[extraIndex + 1])"
                     ></button>
                     <input
-                      ref="returnDateInputRef"
-                      :id="fieldIds.returnDate"
-                      v-model="returnRoute.start_date"
+                      :ref="(element) => setExtraRouteDateInputRef(extraIndex + 1, element)"
+                      :id="`${fieldIds.returnDate}-${extraIndex}`"
+                      v-model="extraRoute.start_date"
                       type="datetime-local"
                       required
-                      :min="routes[0].start_date || minDateTime"
-                      @change="syncReturnEndDate"
+                      :min="getExtraRouteMinDate(extraIndex + 1)"
+                      @change="syncExtraEndDate(extraIndex + 1)"
                     />
                   </div>
-                  <small>{{ returnDateMeta }}</small>
+                  <small>{{ formatCompactDateMeta(extraRoute.start_date) }}</small>
                 </div>
 
                 <div class="availability-field">
-                  <label :for="fieldIds.returnPassengers">{{ copy.passengersLabel }}</label>
+                  <label :for="`${fieldIds.returnPassengers}-${extraIndex}`">{{ copy.passengersLabel }}</label>
                   <div class="field-control">
                     <UsersRound aria-hidden="true" />
                     <select
-                      :id="fieldIds.returnPassengers"
-                      v-model.number="returnRoute.passengers"
+                      :id="`${fieldIds.returnPassengers}-${extraIndex}`"
+                      v-model.number="extraRoute.passengers"
                       required
                     >
                       <option v-for="count in passengerOptions" :key="count" :value="count">
@@ -282,6 +295,7 @@
                 </div>
               </div>
             </div>
+            </template>
 
             <button
               v-show="activeStep === 0 && tripMode === 'round-trip'"
@@ -827,7 +841,7 @@ const errorMessage = ref("");
 const compactError = ref("");
 const compactFormRef = ref(null);
 const departureDateInputRef = ref(null);
-const returnDateInputRef = ref(null);
+const extraRouteDateInputRefs = ref({});
 const activeStep = ref(0);
 const tripMode = ref("one-way");
 const routeType = ref("NATIONAL");
@@ -862,15 +876,40 @@ const toNumber = (value, fallback = 0) => {
 };
 
 const openDatePicker = (inputRef) => {
-  const input = inputRef?.value;
-  if (!input) return;
+  const input =
+    inputRef?.value && typeof inputRef.value.focus === "function"
+      ? inputRef.value
+      : inputRef;
 
-  input.focus();
+  if (!input || typeof input.focus !== "function") return;
+
+  input.focus({ preventScroll: true });
 
   if (typeof input.showPicker === "function") {
-    input.showPicker();
+    try {
+      input.showPicker();
+    } catch {
+      input.focus({ preventScroll: true });
+    }
   }
 };
+
+const setExtraRouteDateInputRef = (routeIndex, element) => {
+  if (element) {
+    extraRouteDateInputRefs.value[routeIndex] = element;
+    return;
+  }
+
+  delete extraRouteDateInputRefs.value[routeIndex];
+};
+
+const getExtraRouteTitle = (extraIndex) => {
+  if (extraIndex === 0) return copy.value.returnFlightLabel;
+  return isSpanish.value ? `Vuelo ${extraIndex + 2}` : `Flight ${extraIndex + 2}`;
+};
+
+const getExtraRouteMinDate = (routeIndex) =>
+  routes.value[routeIndex - 1]?.start_date || routes.value[0]?.start_date || minDateTime.value;
 
 const getAircraftCruiseSpeed = (aircraft) =>
   toNumber(
@@ -1108,14 +1147,7 @@ const compactToMeta = computed(() =>
 const hasReturnFlight = computed(() => tripMode.value === "round-trip" && routes.value.length > 1);
 const returnRoute = computed(() => routes.value[1] || emptyRoute());
 
-const returnFromMeta = computed(() =>
-  getCompactAirportMeta(returnRoute.value?.fromAirport),
-);
-const returnToMeta = computed(() =>
-  getCompactAirportMeta(returnRoute.value?.toAirport),
-);
-const compactDateMeta = computed(() => {
-  const value = routes.value[0]?.start_date;
+const formatCompactDateMeta = (value) => {
   if (!value) return isSpanish.value ? "Selecciona fecha" : "Select date";
 
   return new Intl.DateTimeFormat(isSpanish.value ? "es-MX" : "en-US", {
@@ -1123,17 +1155,10 @@ const compactDateMeta = computed(() => {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
-});
-const returnDateMeta = computed(() => {
-  const value = returnRoute.value?.start_date;
-  if (!value) return isSpanish.value ? "Selecciona fecha" : "Select date";
-
-  return new Intl.DateTimeFormat(isSpanish.value ? "es-MX" : "en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-});
+};
+const compactDateMeta = computed(() =>
+  formatCompactDateMeta(routes.value[0]?.start_date),
+);
 
 const compactAircraftOptions = computed(() => {
   const passengers = toNumber(routes.value[0]?.passengers, 1);
@@ -1264,8 +1289,10 @@ const setCompactAirport = (direction) => {
   }
 };
 
-const setReturnAirport = (direction) => {
-  const routeItem = returnRoute.value;
+const setExtraAirport = (routeIndex, direction) => {
+  const routeItem = routes.value[routeIndex];
+  if (!routeItem) return;
+
   const code = direction === "from" ? routeItem.fromAirport : routeItem.toAirport;
   assignAirportToSpecificRoute(routeItem, direction, findCompactAirport(code));
   compactError.value = "";
@@ -1294,8 +1321,14 @@ const swapCompactRoute = () => {
   }
 };
 
-const swapReturnRoute = () => {
-  const routeItem = returnRoute.value;
+const swapExtraRoute = (routeIndex) => {
+  const routeItem = routes.value[routeIndex];
+  swapRouteAirports(routeItem);
+};
+
+const swapRouteAirports = (routeItem) => {
+  if (!routeItem) return;
+
   const from = {
     airport: routeItem.fromAirport,
     city: routeItem.fromCity,
@@ -1330,9 +1363,21 @@ const addCompactFlight = () => {
       id: Date.now() + Math.random(),
       ...emptyRoute(),
     });
+    syncReturnRouteFromOutbound();
+    return;
   }
 
-  syncReturnRouteFromOutbound();
+  const lastRoute = routes.value[routes.value.length - 1];
+  routes.value.push({
+    id: Date.now() + Math.random(),
+    ...emptyRoute(),
+    fromAirport: lastRoute?.toAirport || "",
+    fromCity: lastRoute?.toCity || "",
+    fromState: lastRoute?.toState || "",
+    fromCountry: lastRoute?.toCountry || "",
+    passengers: lastRoute?.passengers || routes.value[0]?.passengers || 1,
+    aircraft_id: lastRoute?.aircraft_id || routes.value[0]?.aircraft_id || null,
+  });
 };
 
 const syncReturnRouteFromOutbound = () => {
@@ -1352,7 +1397,7 @@ const syncReturnRouteFromOutbound = () => {
     inbound.start_date = date.toISOString().slice(0, 16);
   }
 
-  syncReturnEndDate();
+  syncExtraEndDate(1);
 };
 
 const setTripMode = (mode) => {
@@ -1364,10 +1409,16 @@ const setTripMode = (mode) => {
   }
 };
 
-const removeReturnFlight = () => {
-  if (routes.value.length > 1) {
-    routes.value = [routes.value[0]];
+const removeExtraFlight = (routeIndex) => {
+  if (routeIndex <= 0 || !routes.value[routeIndex]) return;
+
+  routes.value.splice(routeIndex, 1);
+  delete extraRouteDateInputRefs.value[routeIndex];
+
+  if (routes.value.length <= 1) {
+    tripMode.value = "one-way";
   }
+
   compactError.value = "";
 };
 
@@ -1387,10 +1438,11 @@ const onOutboundDateChange = () => {
   }
 };
 
-const syncReturnEndDate = () => {
-  const routeItem = returnRoute.value;
+const syncExtraEndDate = (routeIndex) => {
+  const routeItem = routes.value[routeIndex];
   if (!routeItem?.start_date) return;
   routeItem.end_date = routeItem.start_date;
+  compactError.value = "";
 };
 
 const selectCompactAircraft = (aircraft) => {
@@ -1398,9 +1450,9 @@ const selectCompactAircraft = (aircraft) => {
 
   routes.value[0].aircraft_id = aircraft.id;
 
-  if (routes.value[1]) {
-    routes.value[1].aircraft_id = aircraft.id;
-  }
+  routes.value.slice(1).forEach((routeItem) => {
+    routeItem.aircraft_id = aircraft.id;
+  });
 
   compactError.value = "";
 };
@@ -1419,16 +1471,18 @@ const validateCompactStep = (step = activeStep.value) => {
       return false;
     }
     if (hasReturnFlight.value) {
-      const inbound = returnRoute.value || {};
-      if (!inbound.fromAirport || !inbound.toAirport || !inbound.start_date || !inbound.passengers) {
-        compactError.value = copy.value.missingReturn;
-        return false;
+      for (let index = 1; index < routes.value.length; index += 1) {
+        const extraRoute = routes.value[index] || {};
+        if (!extraRoute.fromAirport || !extraRoute.toAirport || !extraRoute.start_date || !extraRoute.passengers) {
+          compactError.value = copy.value.missingReturn;
+          return false;
+        }
+        if (norm(extraRoute.fromAirport) === norm(extraRoute.toAirport)) {
+          compactError.value = copy.value.sameAirport;
+          return false;
+        }
+        syncExtraEndDate(index);
       }
-      if (norm(inbound.fromAirport) === norm(inbound.toAirport)) {
-        compactError.value = copy.value.sameAirport;
-        return false;
-      }
-      syncReturnEndDate();
     }
     syncCompactEndDate();
   }

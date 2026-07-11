@@ -200,7 +200,7 @@ export const PAGE_SEGMENTS = {
   fleet: "fleet",
   reserva: "reserva",
   airports: "airports",
-  lookbooks: "lookbooks",
+  lookbooks: "biblioteca",
   thankYou: "thank-you",
 };
 

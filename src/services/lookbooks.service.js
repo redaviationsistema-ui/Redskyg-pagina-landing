@@ -1,12 +1,19 @@
 import { supabase } from "@/supabase";
 
-const LOOKBOOK_BUCKET = "lookbooks";
 const LOOKBOOK_PENDING_KEY = "redsky-lookbook-pending";
-const DOWNLOAD_MIGRATION_SQL =
-  "alter table public.lookbook_downloads add column if not exists instagram_username text;";
-
-let schemaCapabilitiesPromise;
-let facebookAvailabilityPromise;
+const PUBLIC_LOOKBOOK_COLUMNS = [
+  "id",
+  "title",
+  "slug",
+  "description",
+  "aircraft_name",
+  "category",
+  "cover_url",
+  "pages",
+  "size_mb",
+  "requires_login",
+  "order_index",
+].join(",");
 
 function buildError(message, options = {}) {
   const error = new Error(message);
@@ -14,50 +21,18 @@ function buildError(message, options = {}) {
   return error;
 }
 
-export function getLookbookPendingKey() {
-  return LOOKBOOK_PENDING_KEY;
-}
-
-export function getDownloadMigrationSql() {
-  return DOWNLOAD_MIGRATION_SQL;
-}
-
-export async function getLookbookSchemaCapabilities() {
-  if (!schemaCapabilitiesPromise) {
-    schemaCapabilitiesPromise = Promise.all([
-      supabase
-        .from("lookbooks")
-        .select(
-          "id,title,slug,description,aircraft_name,category,cover_url,pdf_path,pages,size_mb,is_active,requires_login,order_index,created_at,updated_at",
-        )
-        .limit(1),
-      supabase
-        .from("lookbook_downloads")
-        .select("id,lookbook_id,user_id,email,downloaded_at")
-        .limit(1),
-      supabase
-        .from("lookbook_downloads")
-        .select("instagram_username")
-        .limit(1),
-    ]).then(([lookbooksResult, downloadsResult, instagramResult]) => ({
-      lookbooksReady: !lookbooksResult.error,
-      downloadsReady: !downloadsResult.error,
-      hasInstagramUsernameColumn: !instagramResult.error,
-      errors: {
-        lookbooks: lookbooksResult.error,
-        downloads: downloadsResult.error,
-        instagramColumn: instagramResult.error,
-      },
-    }));
+function getBrowserUserAgent() {
+  if (typeof navigator === "undefined") {
+    return "";
   }
 
-  return schemaCapabilitiesPromise;
+  return navigator.userAgent || "";
 }
 
 export async function getActiveLookbooks() {
   const { data, error } = await supabase
     .from("lookbooks")
-    .select("*")
+    .select(PUBLIC_LOOKBOOK_COLUMNS)
     .eq("is_active", true)
     .order("order_index", { ascending: true });
 
@@ -71,49 +46,51 @@ export async function getActiveLookbooks() {
   return Array.isArray(data) ? data : [];
 }
 
-export async function createLookbookSignedUrl(pdfPath, expiresIn = 120) {
-  if (!pdfPath) {
-    throw buildError("El documento ya no está disponible.");
+export async function createLookbookSignedUrl(lookbookId, accessProof) {
+  if (!lookbookId || !accessProof?.email || !accessProof?.downloadedAt) {
+    throw buildError("El documento ya no esta disponible.");
   }
 
-  const { data, error } = await supabase.storage
-    .from(LOOKBOOK_BUCKET)
-    .createSignedUrl(pdfPath, expiresIn);
+  const { data, error } = await supabase.functions.invoke("lookbook-signed-url", {
+    body: {
+      lookbook_id: lookbookId,
+      email: accessProof.email,
+      downloaded_at: accessProof.downloadedAt,
+    },
+  });
 
-  if (error || !data?.signedUrl) {
-    throw buildError("No fue posible generar el acceso al documento.", {
-      cause: error,
-      code: error?.code,
-    });
-  }
-
-  return data.signedUrl;
-}
-
-export async function registerLookbookDownload({
-  lookbookId,
-  userId,
-  email,
-  instagramUsername,
-}) {
-  const capabilities = await getLookbookSchemaCapabilities();
-
-  if (!capabilities.hasInstagramUsernameColumn) {
+  if (error) {
     throw buildError(
-      "Falta la columna instagram_username en lookbook_downloads. Ejecuta la migracion indicada antes de habilitar descargas.",
+      "No fue posible generar la URL temporal desde la funcion segura.",
       {
-        code: "LOOKBOOK_INSTAGRAM_COLUMN_MISSING",
-        migrationSql: DOWNLOAD_MIGRATION_SQL,
+        cause: error,
+        code: error.code,
       },
     );
   }
 
+  const signedUrl = data?.signed_url || data?.signedUrl || data?.url;
+  if (!signedUrl) {
+    throw buildError("La funcion segura no devolvio una URL temporal.");
+  }
+
+  return signedUrl;
+}
+
+export async function registerLookbookDownload({
+  lookbookId,
+  userId = null,
+  email,
+  instagramUsername = null,
+}) {
+  const downloadedAt = new Date().toISOString();
   const payload = {
     lookbook_id: lookbookId,
     user_id: userId,
     email,
     instagram_username: instagramUsername,
-    downloaded_at: new Date().toISOString(),
+    user_agent: getBrowserUserAgent(),
+    downloaded_at: downloadedAt,
   };
 
   const { error } = await supabase.from("lookbook_downloads").insert(payload);
@@ -124,44 +101,48 @@ export async function registerLookbookDownload({
       code: error.code,
     });
   }
+
+  return {
+    email,
+    downloadedAt,
+  };
 }
 
-export async function fetchLookbookBlob(signedUrl) {
-  const response = await fetch(signedUrl);
-
-  if (!response.ok) {
-    throw buildError("No fue posible obtener el documento.");
-  }
-
-  return response.blob();
-}
-
-export function triggerLookbookDownload(blob, filename) {
-  const objectUrl = URL.createObjectURL(blob);
+export function openLookbookSignedUrl(signedUrl) {
   const link = document.createElement("a");
-  link.href = objectUrl;
-  link.download = filename;
+  link.href = signedUrl;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(objectUrl);
 }
 
 export function normalizeInstagramUsername(value = "") {
   const normalized = String(value).trim().replace(/^@+/, "").toLowerCase();
-  const isValid = /^[a-zA-Z0-9._]{1,30}$/.test(normalized);
+
+  if (!normalized) {
+    return {
+      value: "",
+      isValid: true,
+    };
+  }
 
   return {
     value: normalized,
-    isValid,
+    isValid: /^[a-zA-Z0-9._]{1,30}$/.test(normalized),
   };
+}
+
+export function isValidEmail(value = "") {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
 }
 
 export async function getCurrentSession() {
   const { data, error } = await supabase.auth.getSession();
 
   if (error) {
-    throw buildError("Tu sesión expiró. Inicia sesión nuevamente.", {
+    throw buildError("Tu sesion expiro. Inicia sesion nuevamente.", {
       cause: error,
       code: error.code,
     });
@@ -170,97 +151,24 @@ export async function getCurrentSession() {
   return data.session ?? null;
 }
 
-export async function sendLookbookMagicLink(email, redirectTo) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: redirectTo,
-    },
-  });
+export function getUserInstagramUsername(user) {
+  const metadata = user?.user_metadata || {};
+  const candidates = [
+    metadata.instagram_username,
+    metadata.instagram,
+    metadata.user_name,
+    metadata.username,
+    metadata.preferred_username,
+  ];
 
-  if (error) {
-    throw buildError("No fue posible iniciar sesión con ese correo.", {
-      cause: error,
-      code: error.code,
-    });
-  }
-}
-
-export async function signInWithFacebook(redirectTo) {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "facebook",
-    options: {
-      redirectTo,
-      skipBrowserRedirect: false,
-    },
-  });
-
-  if (error) {
-    throw buildError("No fue posible continuar con Facebook.", {
-      cause: error,
-      code: error.code,
-    });
+  for (const candidate of candidates) {
+    const normalized = normalizeInstagramUsername(candidate);
+    if (normalized.value && normalized.isValid) {
+      return normalized.value;
+    }
   }
 
-  return data;
-}
-
-export async function checkFacebookOAuthAvailable() {
-  if (!facebookAvailabilityPromise) {
-    facebookAvailabilityPromise = supabase.auth
-      .signInWithOAuth({
-        provider: "facebook",
-        options: {
-          redirectTo: "https://example.com",
-          skipBrowserRedirect: true,
-        },
-      })
-      .then(({ data, error }) => !error && Boolean(data?.url))
-      .catch(() => false);
-  }
-
-  return facebookAvailabilityPromise;
-}
-
-export async function saveInstagramUsername(instagramUsername) {
-  const { error } = await supabase.auth.updateUser({
-    data: {
-      instagram_username: instagramUsername,
-    },
-  });
-
-  if (error) {
-    throw buildError("No fue posible guardar tu usuario de Instagram.", {
-      cause: error,
-      code: error.code,
-    });
-  }
-}
-
-export function readPendingLookbookDownload() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const raw = window.sessionStorage.getItem(LOOKBOOK_PENDING_KEY);
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    window.sessionStorage.removeItem(LOOKBOOK_PENDING_KEY);
-    return null;
-  }
-}
-
-export function writePendingLookbookDownload(payload) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.sessionStorage.setItem(LOOKBOOK_PENDING_KEY, JSON.stringify(payload));
+  return "";
 }
 
 export function clearPendingLookbookDownload() {

@@ -40,7 +40,12 @@ const routeDefinitions = [
   },
   { pageKey: "reserva", path: "reserva", component: Reserva },
   { pageKey: "airports", path: "airports", component: Airports },
-  { pageKey: "lookbooks", path: "lookbooks", component: LookbooksView },
+  {
+    pageKey: "lookbooks",
+    path: "biblioteca",
+    component: LookbooksView,
+    aliases: ["lookbooks"],
+  },
   { pageKey: "thankYou", path: "thank-you", component: ThankYou },
 ];
 
@@ -121,7 +126,11 @@ const routes = [
   },
   {
     path: "/lookbooks",
-    redirect: `/${DEFAULT_LOCALE}/lookbooks`,
+    redirect: `/${DEFAULT_LOCALE}/biblioteca`,
+  },
+  {
+    path: "/biblioteca",
+    redirect: `/${DEFAULT_LOCALE}/biblioteca`,
   },
   {
     path: "/:pathMatch(.*)*",

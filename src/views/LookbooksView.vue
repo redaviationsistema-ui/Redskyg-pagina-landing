@@ -18,12 +18,6 @@
           </RouterLink>
         </div>
 
-        <div v-if="schemaWarning" class="lookbooks-banner lookbooks-banner--warning">
-          <strong>{{ copy.schemaWarningTitle }}</strong>
-          <span>{{ schemaWarning }}</span>
-          <code>{{ migrationSql }}</code>
-        </div>
-
         <div v-if="feedback.message" class="lookbooks-banner" :class="feedbackClass">
           {{ feedback.message }}
         </div>
@@ -38,21 +32,21 @@
             />
           </label>
 
-          <div class="lookbooks-filters">
+          <div class="lookbooks-filters" aria-label="Filtros por categoria">
             <button
               v-for="option in categoryOptions"
-              :key="option.value"
+              :key="option"
               type="button"
               class="lookbooks-filter"
-              :class="{ active: selectedCategory === option.value }"
-              @click="selectedCategory = option.value"
+              :class="{ active: selectedCategory === option }"
+              @click="selectedCategory = option"
             >
-              {{ option.label }}
+              {{ option }}
             </button>
           </div>
         </div>
 
-        <div v-if="loading" class="lookbooks-grid">
+        <div v-if="loading" class="lookbooks-grid" aria-live="polite">
           <article v-for="item in 6" :key="item" class="lookbooks-skeleton">
             <div class="lookbooks-skeleton__media"></div>
             <div class="lookbooks-skeleton__line lookbooks-skeleton__line--short"></div>
@@ -80,36 +74,20 @@
             :key="lookbook.id"
             :lookbook="lookbook"
             :downloading="downloadingId === lookbook.id"
-            @preview="openPreview(lookbook)"
             @download="handleDownloadRequest(lookbook)"
           />
         </div>
       </div>
 
-      <LookbookPreviewModal
-        :visible="previewVisible"
-        :title="selectedLookbook?.title || copy.title"
-        :pdf-url="previewUrl"
-        :loading="previewLoading"
-        @close="closePreview"
-      />
-
       <LookbookAccessModal
         :visible="accessModalVisible"
-        :is-authenticated="Boolean(currentUser)"
         :email="email"
         :instagram-username="instagramUsername"
-        :consent-accepted="consentAccepted"
         :loading="accessLoading"
         :error-message="accessError"
-        :facebook-enabled="facebookEnabled"
-        :show-instagram-coming-soon="true"
-        :instagram-notice="copy.instagramAuthStatus"
         @update:email="email = $event"
         @update:instagramUsername="instagramUsername = $event"
-        @update:consentAccepted="consentAccepted = $event"
         @submit="submitAccess"
-        @facebook="continueWithFacebook"
         @close="closeAccessModal"
       />
     </section>
@@ -117,34 +95,25 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import MainLayout from "@/layouts/MainLayout.vue";
 import LookbookCard from "@/components/lookbooks/LookbookCard.vue";
-import LookbookPreviewModal from "@/components/lookbooks/LookbookPreviewModal.vue";
 import LookbookAccessModal from "@/components/lookbooks/LookbookAccessModal.vue";
 import { useLocalizedNavigation } from "@/composables/useLocalizedNavigation";
 import {
-  checkFacebookOAuthAvailable,
   clearPendingLookbookDownload,
   createLookbookSignedUrl,
-  fetchLookbookBlob,
   getActiveLookbooks,
   getCurrentSession,
-  getDownloadMigrationSql,
-  getLookbookSchemaCapabilities,
+  getUserInstagramUsername,
+  isValidEmail,
   normalizeInstagramUsername,
-  readPendingLookbookDownload,
+  openLookbookSignedUrl,
   registerLookbookDownload,
-  saveInstagramUsername,
-  sendLookbookMagicLink,
-  signInWithFacebook,
-  triggerLookbookDownload,
-  writePendingLookbookDownload,
 } from "@/services/lookbooks.service";
-import { supabase } from "@/supabase";
 
-const props = defineProps({
+defineProps({
   embedded: {
     type: Boolean,
     default: false,
@@ -153,113 +122,68 @@ const props = defineProps({
 
 const { locale, localizedPath } = useLocalizedNavigation();
 
+const categoryOptions = [
+  "Todos",
+  "Helicóptero",
+  "Monomotor pistón",
+  "Turbohélice",
+  "Light Jet",
+  "Mid Jet",
+  "Super Mid",
+  "Heavy Jet",
+  "Regional Jet",
+];
+
 const lookbooks = ref([]);
 const loading = ref(false);
 const error = ref("");
 const searchTerm = ref("");
 const selectedCategory = ref("Todos");
 const selectedLookbook = ref(null);
-const previewVisible = ref(false);
-const previewLoading = ref(false);
-const previewUrl = ref("");
 const accessModalVisible = ref(false);
 const downloadingId = ref(null);
 const instagramUsername = ref("");
-const consentAccepted = ref(false);
 const email = ref("");
 const accessLoading = ref(false);
 const accessError = ref("");
-const currentUser = ref(null);
-const facebookEnabled = ref(false);
-const schemaWarning = ref("");
-const feedback = ref({
-  tone: "",
-  message: "",
-});
-const migrationSql = getDownloadMigrationSql();
+const feedback = ref({ tone: "", message: "" });
 
 const copy = computed(() =>
   locale.value === "en-us"
     ? {
         eyebrow: "Aircraft Library",
-        title: "Private aircraft library",
+        title: "Aircraft library",
         subtitle:
-          "Explore specifications, premium brochures and technical guides for our aircraft categories.",
+          "Browse aircraft guides, technical sheets and private aviation brochures.",
         fullLibrary: "Open full library",
-        searchLabel: "Search by aircraft",
-        searchPlaceholder: "Search by document or aircraft name",
+        searchLabel: "Search",
+        searchPlaceholder: "Search by title, description or aircraft",
         errorTitle: "Unable to load documents",
         retry: "Try again",
-        emptyTitle: "No documents available",
-        emptyMessage:
-          "There are no active eBooks in this category yet. Please check back soon.",
-        downloadSuccess: "Documento descargado correctamente.",
-        loginRequired: "Inicia sesión para descargar este eBook.",
-        invalidInstagram: "Ingresa un usuario de Instagram válido.",
-        consentRequired: "Debes aceptar la autorización para continuar.",
-        previewError: "No fue posible generar el acceso al documento.",
-        downloadLogError: "No fue posible registrar la descarga.",
-        sessionExpired: "Tu sesión expiró. Inicia sesión nuevamente.",
-        unavailable: "El documento ya no está disponible.",
-        magicLinkSent:
-          "Te enviamos un enlace de acceso a tu correo. Vuelve aquí después de iniciar sesión para completar la descarga.",
-        schemaWarningTitle: "Database action required",
-        instagramAuthStatus:
-          "Instagram login is not implemented in this project yet. The button is left prepared for a future integration.",
+        emptyTitle: "No results",
+        emptyMessage: "Try another search term or category.",
+        downloadSuccess: "Guide ready. We opened the temporary PDF link.",
+        invalidEmail: "Enter a valid email address.",
+        invalidInstagram: "Enter a valid Instagram username.",
+        unavailable: "This document is no longer available.",
       }
     : {
         eyebrow: "Biblioteca de aeronaves",
         title: "Biblioteca de aeronaves",
         subtitle:
-          "Explora documentación, especificaciones y guías exclusivas de nuestra flota.",
+          "Explora guias, fichas tecnicas y documentacion de aeronaves privadas.",
         fullLibrary: "Ver biblioteca completa",
-        searchLabel: "Buscar por aeronave",
-        searchPlaceholder: "Buscar por documento o nombre de aeronave",
+        searchLabel: "Buscar",
+        searchPlaceholder: "Buscar por titulo, descripcion o aeronave",
         errorTitle: "No fue posible cargar los documentos",
         retry: "Reintentar",
-        emptyTitle: "No hay documentos disponibles",
-        emptyMessage:
-          "Todavía no hay eBooks activos para esta categoría. Intenta de nuevo más tarde.",
-        downloadSuccess: "Documento descargado correctamente.",
-        loginRequired: "Inicia sesión para descargar este eBook.",
-        invalidInstagram: "Ingresa un usuario de Instagram válido.",
-        consentRequired: "Debes aceptar la autorización para continuar.",
-        previewError: "No fue posible generar el acceso al documento.",
-        downloadLogError: "No fue posible registrar la descarga.",
-        sessionExpired: "Tu sesión expiró. Inicia sesión nuevamente.",
-        unavailable: "El documento ya no está disponible.",
-        magicLinkSent:
-          "Te enviamos un enlace de acceso a tu correo. Regresa aquí después de iniciar sesión para completar la descarga.",
-        schemaWarningTitle: "Acción pendiente en base de datos",
-        instagramAuthStatus:
-          "El login con Instagram aún no está implementado en este proyecto. El botón queda preparado para integrarlo después.",
+        emptyTitle: "Sin resultados",
+        emptyMessage: "Intenta con otra busqueda o categoria.",
+        downloadSuccess: "Guia lista. Abrimos el enlace temporal del PDF.",
+        invalidEmail: "Ingresa un correo electronico valido.",
+        invalidInstagram: "Ingresa un usuario de Instagram valido.",
+        unavailable: "El documento ya no esta disponible.",
       },
-);
-
-const categoryOptions = computed(() =>
-  locale.value === "en-us"
-    ? [
-        { value: "Todos", label: "All" },
-        { value: "Helicóptero", label: "Helicopter" },
-        { value: "Monomotor Pistón", label: "Single Engine Piston" },
-        { value: "Turbohélice", label: "Turboprop" },
-        { value: "Light Jet", label: "Light Jet" },
-        { value: "Mid Jet", label: "Mid Jet" },
-        { value: "Super Mid", label: "Super Mid" },
-        { value: "Heavy Jet", label: "Heavy Jet" },
-        { value: "Regional Jet", label: "Regional Jet" },
-      ]
-    : [
-        { value: "Todos", label: "Todos" },
-        { value: "Helicóptero", label: "Helicóptero" },
-        { value: "Monomotor Pistón", label: "Monomotor Pistón" },
-        { value: "Turbohélice", label: "Turbohélice" },
-        { value: "Light Jet", label: "Light Jet" },
-        { value: "Mid Jet", label: "Mid Jet" },
-        { value: "Super Mid", label: "Super Mid" },
-        { value: "Heavy Jet", label: "Heavy Jet" },
-        { value: "Regional Jet", label: "Regional Jet" },
-      ],
 );
 
 const feedbackClass = computed(() =>
@@ -287,24 +211,12 @@ const filteredLookbooks = computed(() =>
     }
 
     const haystack = normalizeText(
-      [item.title, item.aircraft_name, item.category, item.description]
-        .filter(Boolean)
-        .join(" "),
+      [item.title, item.description, item.aircraft_name].filter(Boolean).join(" "),
     );
 
     return haystack.includes(normalizedSearch.value);
   }),
 );
-
-const authRedirectTo = computed(() => {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return window.location.href;
-});
-
-let authSubscription;
 
 function normalizeText(value = "") {
   return String(value)
@@ -314,24 +226,16 @@ function normalizeText(value = "") {
 }
 
 function normalizeCategory(value = "") {
-  const normalized = normalizeText(value)
-    .replace(/\bjets?\b/g, "jet")
-    .replace(/\bjet ligero\b/g, "light jet")
-    .replace(/\bjet mediano\b/g, "mid jet")
-    .replace(/\bjet super mediano\b/g, "super mid")
-    .replace(/\bjet de largo alcance\b/g, "heavy jet")
-    .replace(/\bhelicopteros?\b/g, "helicoptero")
-    .replace(/\bturbohelices?\b/g, "turbohelice");
-
+  const normalized = normalizeText(value);
   const map = {
-    all: "todos",
     todos: "todos",
-    helicopter: "helicoptero",
+    all: "todos",
     helicoptero: "helicoptero",
-    "single engine piston": "monomotor piston",
+    helicopter: "helicoptero",
     "monomotor piston": "monomotor piston",
-    turboprop: "turbohelice",
+    "single engine piston": "monomotor piston",
     turbohelice: "turbohelice",
+    turboprop: "turbohelice",
     "light jet": "light jet",
     "mid jet": "mid jet",
     "super mid": "super mid",
@@ -343,33 +247,26 @@ function normalizeCategory(value = "") {
 }
 
 function setFeedback(message, tone = "error") {
-  feedback.value = {
-    message,
-    tone,
-  };
+  feedback.value = { message, tone };
 }
 
 function resetFeedback() {
-  feedback.value = {
-    message: "",
-    tone: "",
-  };
-}
-
-function syncUserFromSession(session) {
-  currentUser.value = session?.user ?? null;
-  email.value = session?.user?.email ?? email.value;
-  instagramUsername.value =
-    session?.user?.user_metadata?.instagram_username ?? instagramUsername.value;
+  feedback.value = { message: "", tone: "" };
 }
 
 async function refreshSession() {
-  try {
-    const session = await getCurrentSession();
-    syncUserFromSession(session);
-  } catch (sessionError) {
-    setFeedback(sessionError.message || copy.value.sessionExpired);
+  const session = await getCurrentSession();
+
+  if (session?.user?.email) {
+    email.value = session.user.email;
   }
+
+  const instagram = getUserInstagramUsername(session?.user);
+  if (instagram) {
+    instagramUsername.value = instagram;
+  }
+
+  return session;
 }
 
 async function loadLookbooks() {
@@ -385,39 +282,6 @@ async function loadLookbooks() {
   }
 }
 
-async function inspectSchema() {
-  const capabilities = await getLookbookSchemaCapabilities();
-
-  if (!capabilities.hasInstagramUsernameColumn) {
-    schemaWarning.value =
-      locale.value === "en-us"
-        ? "The download log table is missing instagram_username. Run the SQL below before enabling production downloads."
-        : "La tabla de descargas no tiene instagram_username. Ejecuta el SQL siguiente antes de habilitar descargas en producción.";
-  }
-}
-
-function closePreview() {
-  previewVisible.value = false;
-  previewLoading.value = false;
-  previewUrl.value = "";
-}
-
-async function openPreview(lookbook) {
-  selectedLookbook.value = lookbook;
-  previewVisible.value = true;
-  previewLoading.value = true;
-  previewUrl.value = "";
-  resetFeedback();
-
-  try {
-    previewUrl.value = await createLookbookSignedUrl(lookbook.pdf_path);
-  } catch (previewError) {
-    setFeedback(previewError.message || copy.value.previewError);
-  } finally {
-    previewLoading.value = false;
-  }
-}
-
 function openAccessModal(lookbook) {
   selectedLookbook.value = lookbook;
   accessError.value = "";
@@ -430,86 +294,84 @@ function closeAccessModal() {
   accessError.value = "";
 }
 
-function getResolvedInstagram() {
-  return (
-    currentUser.value?.user_metadata?.instagram_username ||
-    instagramUsername.value ||
-    ""
-  );
+async function retrySignedUrl(lookbookId, accessProof) {
+  let lastError;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await createLookbookSignedUrl(lookbookId, accessProof);
+    } catch (signedUrlError) {
+      lastError = signedUrlError;
+
+      if (attempt === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 450));
+      }
+    }
+  }
+
+  throw lastError;
 }
 
-async function performDownload(lookbook, instagramValue) {
+async function performDownload({ lookbook, emailValue, instagramValue }) {
+  if (!lookbook?.id || downloadingId.value) {
+    return;
+  }
+
   downloadingId.value = lookbook.id;
   resetFeedback();
 
   try {
-    const session = await getCurrentSession();
-    const user = session?.user;
-
-    if (!user) {
-      throw new Error(copy.value.sessionExpired);
-    }
-
-    await registerLookbookDownload({
+    const accessProof = await registerLookbookDownload({
       lookbookId: lookbook.id,
-      userId: user.id,
-      email: user.email || email.value || "",
-      instagramUsername: instagramValue,
+      userId: null,
+      email: emailValue || "",
+      instagramUsername: instagramValue || null,
     });
 
-    const signedUrl = await createLookbookSignedUrl(lookbook.pdf_path);
-    const blob = await fetchLookbookBlob(signedUrl);
-    triggerLookbookDownload(blob, `${lookbook.slug || "lookbook"}.pdf`);
+    const signedUrl = await retrySignedUrl(lookbook.id, accessProof);
+    openLookbookSignedUrl(signedUrl);
     setFeedback(copy.value.downloadSuccess, "success");
     clearPendingLookbookDownload();
   } catch (downloadError) {
-    const message =
-      downloadError?.message ||
-      (downloadError?.code === "LOOKBOOK_INSTAGRAM_COLUMN_MISSING"
-        ? copy.value.downloadLogError
-        : copy.value.unavailable);
-    setFeedback(message);
+    setFeedback(downloadError?.message || copy.value.unavailable);
   } finally {
     downloadingId.value = null;
   }
 }
 
 async function handleDownloadRequest(lookbook) {
+  if (downloadingId.value) {
+    return;
+  }
+
   selectedLookbook.value = lookbook;
   resetFeedback();
 
   try {
-    const session = await getCurrentSession();
-    const user = session?.user;
-
-    if (!user) {
-      setFeedback(copy.value.loginRequired, "warning");
-      openAccessModal(lookbook);
-      return;
+    const session = await refreshSession();
+    if (session?.user?.email) {
+      email.value = session.user.email;
     }
-
-    syncUserFromSession(session);
-
-    const normalizedInstagram = normalizeInstagramUsername(getResolvedInstagram());
-    if (!normalizedInstagram.isValid) {
-      setFeedback(copy.value.invalidInstagram, "warning");
-      openAccessModal(lookbook);
-      return;
-    }
-
-    await performDownload(lookbook, normalizedInstagram.value);
-  } catch (downloadError) {
-    setFeedback(downloadError.message || copy.value.sessionExpired);
-    openAccessModal(lookbook);
+  } catch {
+    // La descarga publica no depende de una sesion activa.
   }
+
+  openAccessModal(lookbook);
 }
 
 async function submitAccess() {
   accessError.value = "";
   resetFeedback();
 
-  if (!consentAccepted.value) {
-    accessError.value = copy.value.consentRequired;
+  const lookbook = selectedLookbook.value;
+  if (!lookbook) {
+    accessError.value = copy.value.unavailable;
+    return;
+  }
+
+  const trimmedEmail = email.value.trim().toLowerCase();
+  if (!isValidEmail(trimmedEmail)) {
+    accessError.value = copy.value.invalidEmail;
     return;
   }
 
@@ -522,132 +384,19 @@ async function submitAccess() {
   accessLoading.value = true;
 
   try {
-    if (currentUser.value) {
-      await saveInstagramUsername(normalizedInstagram.value);
-      instagramUsername.value = normalizedInstagram.value;
-      closeAccessModal();
-
-      if (selectedLookbook.value) {
-        await performDownload(selectedLookbook.value, normalizedInstagram.value);
-      }
-
-      return;
-    }
-
-    if (!email.value) {
-      accessError.value =
-        locale.value === "en-us"
-          ? "Please enter your email to continue."
-          : "Ingresa tu correo electrónico para continuar.";
-      return;
-    }
-
-    writePendingLookbookDownload({
-      lookbookId: selectedLookbook.value?.id,
-      instagramUsername: normalizedInstagram.value,
-      consentAccepted: true,
-      createdAt: new Date().toISOString(),
-    });
-
-    await sendLookbookMagicLink(email.value, authRedirectTo.value);
     closeAccessModal();
-    setFeedback(copy.value.magicLinkSent, "success");
-  } catch (submitError) {
-    accessError.value = submitError.message || copy.value.loginRequired;
+    await performDownload({
+      lookbook,
+      emailValue: trimmedEmail,
+      instagramValue: normalizedInstagram.value || null,
+    });
   } finally {
     accessLoading.value = false;
-  }
-}
-
-async function continueWithFacebook() {
-  accessError.value = "";
-  resetFeedback();
-
-  if (!consentAccepted.value) {
-    accessError.value = copy.value.consentRequired;
-    return;
-  }
-
-  const normalizedInstagram = normalizeInstagramUsername(instagramUsername.value);
-  if (!normalizedInstagram.isValid) {
-    accessError.value = copy.value.invalidInstagram;
-    return;
-  }
-
-  accessLoading.value = true;
-
-  try {
-    writePendingLookbookDownload({
-      lookbookId: selectedLookbook.value?.id,
-      instagramUsername: normalizedInstagram.value,
-      consentAccepted: true,
-      createdAt: new Date().toISOString(),
-    });
-
-    await signInWithFacebook(authRedirectTo.value);
-  } catch (facebookError) {
-    accessError.value = facebookError.message;
-    accessLoading.value = false;
-  }
-}
-
-async function resumePendingDownload() {
-  const pending = readPendingLookbookDownload();
-  if (!pending?.lookbookId || !currentUser.value) {
-    return;
-  }
-
-  const normalizedInstagram = normalizeInstagramUsername(
-    pending.instagramUsername || getResolvedInstagram(),
-  );
-
-  if (!normalizedInstagram.isValid) {
-    instagramUsername.value = pending.instagramUsername || "";
-    consentAccepted.value = Boolean(pending.consentAccepted);
-    const lookbook = lookbooks.value.find((item) => item.id === pending.lookbookId);
-    if (lookbook) {
-      openAccessModal(lookbook);
-    }
-    return;
-  }
-
-  try {
-    await saveInstagramUsername(normalizedInstagram.value);
-  } catch {
-    instagramUsername.value = normalizedInstagram.value;
-  }
-
-  const lookbook = lookbooks.value.find((item) => item.id === pending.lookbookId);
-  if (lookbook) {
-    await performDownload(lookbook, normalizedInstagram.value);
   }
 }
 
 onMounted(async () => {
-  loading.value = true;
-
-  try {
-    await Promise.all([loadLookbooks(), refreshSession(), inspectSchema()]);
-    facebookEnabled.value = await checkFacebookOAuthAvailable();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      syncUserFromSession(session);
-      if (session?.user) {
-        resumePendingDownload();
-      }
-    });
-
-    authSubscription = subscription;
-    await resumePendingDownload();
-  } finally {
-    loading.value = false;
-  }
-});
-
-onBeforeUnmount(() => {
-  authSubscription?.unsubscribe?.();
+  await Promise.all([loadLookbooks(), refreshSession().catch(() => null)]);
 });
 </script>
 
@@ -655,7 +404,6 @@ onBeforeUnmount(() => {
 .lookbooks-page {
   --lookbook-ink: #081a2a;
   --lookbook-blue: #175a8f;
-  --lookbook-gold: #d0ac67;
   --lookbook-paper: #f5f8fb;
   --lookbook-muted: #5d697b;
   --lookbook-line: rgba(8, 26, 42, 0.1);
@@ -687,7 +435,7 @@ onBeforeUnmount(() => {
   color: var(--lookbook-blue);
   font-size: 0.74rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -695,8 +443,8 @@ onBeforeUnmount(() => {
   margin: 0.8rem 0 1rem;
   color: var(--lookbook-ink);
   font-size: clamp(2.3rem, 4vw, 4.4rem);
-  line-height: 0.98;
-  letter-spacing: -0.04em;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
 .lookbooks-hero p {
@@ -719,7 +467,7 @@ onBeforeUnmount(() => {
   text-decoration: none;
   font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -728,13 +476,8 @@ onBeforeUnmount(() => {
   gap: 6px;
   margin-bottom: 20px;
   padding: 16px 18px;
-  border-radius: 18px;
+  border-radius: 14px;
   font-weight: 600;
-}
-
-.lookbooks-banner code {
-  overflow-wrap: anywhere;
-  font-size: 0.8rem;
 }
 
 .lookbooks-banner--success {
@@ -774,7 +517,7 @@ onBeforeUnmount(() => {
   min-height: 54px;
   padding: 0 18px;
   border: 1px solid var(--lookbook-line);
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.96);
   color: var(--lookbook-ink);
   font: inherit;
@@ -797,7 +540,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -818,13 +561,13 @@ onBeforeUnmount(() => {
   gap: 18px;
   padding: 20px;
   border: 1px solid var(--lookbook-line);
-  border-radius: 28px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.88);
 }
 
 .lookbooks-skeleton__media,
 .lookbooks-skeleton__line {
-  border-radius: 18px;
+  border-radius: 12px;
   background: linear-gradient(90deg, rgba(226, 234, 242, 0.9), rgba(241, 245, 249, 0.98), rgba(226, 234, 242, 0.9));
   background-size: 200% 100%;
   animation: lookbook-pulse 1.35s ease infinite;
@@ -848,7 +591,7 @@ onBeforeUnmount(() => {
   gap: 12px;
   padding: 64px 28px;
   border: 1px dashed var(--lookbook-line);
-  border-radius: 28px;
+  border-radius: 18px;
   text-align: center;
   background: rgba(255, 255, 255, 0.76);
 }
@@ -873,7 +616,7 @@ onBeforeUnmount(() => {
   min-height: 48px;
   padding: 0 20px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #081a2a;
   color: #ffffff;
   cursor: pointer;
