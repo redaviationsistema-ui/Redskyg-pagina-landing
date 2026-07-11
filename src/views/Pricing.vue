@@ -22,7 +22,7 @@ const content = {
     title: "Pricing",
     subtitle:
       "Transparent charter planning for executive, leisure and mission-critical flights.",
-    image: "images/Pricing/pricing.webp",
+    image: "images/Pricing/5.png",
     alt: "Pricing",
   },
   packages: {

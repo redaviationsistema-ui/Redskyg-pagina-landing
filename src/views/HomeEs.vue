@@ -203,6 +203,9 @@ const content = {
       "Experiencia comprobada",
     ],
   },
+  lookbooks: {
+    enabled: true,
+  },
   cta: {
     eyebrow: "Cotizacion Ejecutiva",
     title: "Cotizacion en minutos, seguimiento humano y ejecucion ejecutiva.",

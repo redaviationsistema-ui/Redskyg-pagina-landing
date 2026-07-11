@@ -22,7 +22,7 @@ const content = {
     title: "Precios",
     subtitle:
       "Planeacion transparente de charter para vuelos ejecutivos, de placer y operaciones criticas.",
-    image: "images/Pricing/pricing.webp",
+    image: "images/Pricing/5.png",
     alt: "Precios",
   },
   packages: {

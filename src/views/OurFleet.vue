@@ -6,12 +6,12 @@
 import FleetLanding from "../components/FleetLanding.vue";
 
 const content = {
-  fallbackImage: "images/Ourfleet/Ourfleet.jpg",
+  fallbackImage: "images/Ourfleet/3.png",
   hero: {
     eyebrow: "Private Aviation Collection",
     title: "Executive Fleet",
     subtitle: "Luxury aircraft for business and private travel",
-    image: "images/Ourfleet/Ourfleet.jpg",
+    image: "images/Ourfleet/3.png",
     alt: "Executive Fleet",
   },
   intro: {

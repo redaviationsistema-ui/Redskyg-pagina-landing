@@ -14,6 +14,7 @@ import OurFleetEs from "../views/OurFleetEs.vue";
 import Reserva from "../views/Reserva.vue";
 import Airports from "../views/Airports.vue";
 import ThankYou from "../views/ThankYou.vue";
+import LookbooksView from "../views/LookbooksView.vue";
 import { DEFAULT_LOCALE, detectPreferredLocale } from "../i18n/site";
 
 const routeDefinitions = [
@@ -39,6 +40,7 @@ const routeDefinitions = [
   },
   { pageKey: "reserva", path: "reserva", component: Reserva },
   { pageKey: "airports", path: "airports", component: Airports },
+  { pageKey: "lookbooks", path: "lookbooks", component: LookbooksView },
   { pageKey: "thankYou", path: "thank-you", component: ThankYou },
 ];
 
@@ -116,6 +118,10 @@ const routes = [
   {
     path: "/thank-you",
     redirect: `/${DEFAULT_LOCALE}/thank-you`,
+  },
+  {
+    path: "/lookbooks",
+    redirect: `/${DEFAULT_LOCALE}/lookbooks`,
   },
   {
     path: "/:pathMatch(.*)*",

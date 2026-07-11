@@ -198,6 +198,9 @@ const content = {
       "Proven experience",
     ],
   },
+  lookbooks: {
+    enabled: true,
+  },
   cta: {
     eyebrow: "Final CTA",
     title: "Ready to move with private aviation precision?",

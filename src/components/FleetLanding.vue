@@ -133,128 +133,113 @@
             </div>
 
             <p class="fleet-results">
-              {{ filteredAircraft.length }} {{ filterLabels.results }}
+              {{ sortedFilteredAircraft.length }} {{ filterLabels.results }}
             </p>
 
-            <div
-              v-if="!paginatedAircraft.length"
-              class="fleet-empty"
-            >
-              {{ filterLabels.empty }}
-            </div>
-
-            <div v-else class="fleet-list">
-            <article
-              v-for="item in paginatedAircraft"
-              :key="item.id"
-              class="aircraft-row"
-            >
-              <button
-                class="aircraft-media"
-                type="button"
-                :aria-label="`${content.actions.view} ${item.nombre}`"
-                @click="openModal(item)"
+            <div v-if="paginatedAircraft.length" class="fleet-list">
+              <article
+                v-for="item in paginatedAircraft"
+                :key="item.id"
+                class="aircraft-row"
               >
-                <img
-                  :src="item.imagenes?.[0] || assetUrl(content.fallbackImage)"
-                  :alt="item.nombre"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span>{{ content.actions.view }}</span>
-              </button>
+                <button
+                  class="aircraft-media"
+                  type="button"
+                  @click="openModal(item)"
+                >
+                  <img
+                    v-if="item.imagenes?.length"
+                    :src="assetUrl(item.imagenes[0])"
+                    :alt="item.nombre"
+                    loading="lazy"
+                  />
+                  <span>{{ getAircraftCategoryLabel(item) }}</span>
+                </button>
 
-              <div class="aircraft-main">
-                <span class="aircraft-category">{{ getAircraftCategoryLabel(item) }}</span>
-                <h3>{{ item.nombre }}</h3>
-                <p v-if="item.base_city || item.base" class="aircraft-base">
-                  <strong>{{ filterLabels.base }}:</strong>
-                  <strong class="aircraft-base__value">{{ item.base_city || item.base }}</strong>
-                </p>
-                <p>{{ getAircraftDescription(item) }}</p>
+                <div class="aircraft-main">
+                  <p class="aircraft-base">
+                    {{ filterLabels.base }}
+                    <strong class="aircraft-base__value">{{ getAirportLabel(item.base) }}</strong>
+                  </p>
+                  <h3>{{ item.nombre }}</h3>
+                  <p>{{ getAircraftDescription(item) }}</p>
 
-                <div class="aircraft-specs">
-                  <span>
-                    <Users aria-hidden="true" />
-                    <strong>{{ item.capacidad_pasajeros }}</strong>
-                    {{ content.specs.passengers }}
-                  </span>
-                  <span>
-                    <Gauge aria-hidden="true" />
-                    <strong>{{ item.cruise_speed_knots || item.alcance_horas || "-" }}</strong>
-                    kts
-                  </span>
-                  <span>
-                    <Map aria-hidden="true" />
-                    <strong>{{ item.alcance_nm || "-" }}</strong>
-                    NM
-                  </span>
-                  <span>
-                    <Briefcase aria-hidden="true" />
-                    {{ isEnglish ? "Baggage" : "Equipaje" }}
-                  </span>
-                  <span
-                    :class="
-                      item.disponible
-                        ? 'aircraft-status aircraft-status--available'
-                        : 'aircraft-status aircraft-status--unavailable'
-                    "
+                  <div class="aircraft-specs">
+                    <span>
+                      <Users aria-hidden="true" />
+                      <strong>{{ item.capacidad_pasajeros || "-" }} pax</strong>
+                    </span>
+                    <span>
+                      <Gauge aria-hidden="true" />
+                      <strong>{{ item.cruise_speed_knots || "-" }} kts</strong>
+                    </span>
+                    <span>
+                      <Map aria-hidden="true" />
+                      <strong>{{ item.alcance_nm || "-" }} nm</strong>
+                    </span>
+                    <span
+                      :class="item.disponible ? 'aircraft-status--available' : 'aircraft-status--unavailable'"
+                    >
+                      <BadgeCheck aria-hidden="true" />
+                      <strong>
+                        {{ item.disponible ? "Disponible" : "No disponible" }}
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="aircraft-action">
+                  <button class="aircraft-favorite" type="button" aria-label="Favorite">
+                    <Heart aria-hidden="true" />
+                  </button>
+
+                  <div class="aircraft-price">
+                    <span>{{ heroCopy.from }}</span>
+                    <strong>{{ formatCurrency(item.precio_renta_usd) }}</strong>
+                    <em>{{ heroCopy.estimatedTotal }}</em>
+                  </div>
+
+                  <button
+                    class="quote-button quote-button--dark"
+                    type="button"
+                    @click="goToQuote(item)"
                   >
-                    <BadgeCheck aria-hidden="true" />
-                    {{
-                      item.disponible
-                        ? content.status.available
-                        : content.status.unavailable
-                    }}
-                  </span>
+                    {{ content.actions.quote }}
+                  </button>
+
+                  <button
+                    class="quote-button quote-button--outline"
+                    type="button"
+                    @click="openModal(item)"
+                  >
+                    {{ heroCopy.explore }}
+                  </button>
                 </div>
-              </div>
-
-              <aside class="aircraft-action" @click.stop>
-                <button class="aircraft-favorite" type="button" aria-label="Save aircraft">
-                  <Heart aria-hidden="true" />
-                </button>
-
-                <div class="aircraft-price">
-                  <span>{{ heroCopy.from }}</span>
-                  <strong>{{ formatCurrency(item.precio_renta_usd) }}<small> / {{ content.specs.hour }}</small></strong>
-                  <em>{{ heroCopy.estimatedTotal }}</em>
-                </div>
-
-                <button class="quote-button quote-button--dark" type="button" @click="openModal(item)">
-                  {{ content.actions.view }}
-                  <ArrowRight aria-hidden="true" />
-                </button>
-
-                <button class="quote-button quote-button--outline" type="button" @click="goToQuote(item)">
-                  {{ content.actions.quote }}
-                </button>
-              </aside>
-            </article>
+              </article>
             </div>
-          </div>
 
-          <div class="pagination" v-if="totalPages > 1">
-            <button
-              type="button"
-              :disabled="currentPage === 1"
-              @click="changePage(currentPage - 1)"
-            >
-              {{ content.pagination.previous }}
-            </button>
+            <div v-else class="fleet-empty">
+              <p>{{ filterLabels.empty }}</p>
+            </div>
 
-            <span>
-              {{ content.pagination.page }} {{ currentPage }}
-              {{ content.pagination.of }} {{ totalPages }}
-            </span>
+            <div v-if="totalPages > 1" class="pagination">
+              <button
+                type="button"
+                :disabled="currentPage === 1"
+                @click="changePage(currentPage - 1)"
+              >
+                Prev
+              </button>
+              <span>{{ currentPage }} / {{ totalPages }}</span>
+              <button
+                type="button"
+                :disabled="currentPage === totalPages"
+                @click="changePage(currentPage + 1)"
+              >
+                Next
+              </button>
+            </div>
 
-            <button
-              type="button"
-              :disabled="currentPage === totalPages"
-              @click="changePage(currentPage + 1)"
-            >
-              {{ content.pagination.next }}
-            </button>
           </div>
         </div>
       </section>
@@ -270,79 +255,65 @@
           </div>
         </div>
       </section>
+
+      <transition name="fade">
+        <div
+          v-if="showModal && selectedAircraft"
+          class="fleet-modal-overlay"
+          @click.self="closeModal"
+        >
+          <div class="fleet-modal">
+            <div class="fleet-modal-grid">
+              <div class="modal-media">
+                <img
+                  v-if="selectedAircraft.imagenes?.length"
+                  class="modal-image"
+                  :src="assetUrl(selectedAircraft.imagenes[currentImage])"
+                  :alt="selectedAircraft.nombre"
+                />
+
+                <div v-if="selectedAircraft.imagenes?.length > 1" class="modal-controls">
+                  <button type="button" @click="prevImage">‹</button>
+                  <button type="button" @click="nextImage">›</button>
+                </div>
+              </div>
+
+              <div class="modal-info">
+                <span class="fleet-eyebrow">{{ getAircraftCategoryLabel(selectedAircraft) }}</span>
+                <h2>{{ selectedAircraft.nombre }}</h2>
+
+                <div class="modal-specs">
+                  <div>
+                    <span>Base</span>
+                    <strong>{{ getAirportLabel(selectedAircraft.base) }}</strong>
+                  </div>
+                  <div>
+                    <span>Capacidad</span>
+                    <strong>{{ selectedAircraft.capacidad_pasajeros || "-" }} pax</strong>
+                  </div>
+                  <div>
+                    <span>Alcance</span>
+                    <strong>{{ selectedAircraft.alcance_nm || "-" }} nm</strong>
+                  </div>
+                </div>
+
+                <p>{{ getAircraftDescription(selectedAircraft) }}</p>
+
+                <button
+                  class="quote-button quote-button--dark quote-button--modal"
+                  type="button"
+                  @click="goToQuote(selectedAircraft)"
+                >
+                  {{ content.actions.quote }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
     </div>
   </MainLayout>
 
-  <transition name="fade">
-    <div v-if="showModal" class="fleet-modal-overlay" @click="closeModal">
-      <div class="fleet-modal" @click.stop>
-        <div v-if="modalLoading" class="fleet-modal-loading">
-          <div class="fleet-spinner"></div>
-        </div>
-
-        <div v-else-if="selectedAircraft" class="fleet-modal-grid">
-          <div class="modal-media">
-            <img
-              v-if="selectedAircraft.imagenes.length"
-              :src="selectedAircraft.imagenes[currentImage]"
-              :alt="selectedAircraft.nombre"
-              class="modal-image"
-            />
-
-            <div class="modal-controls">
-              <button
-                v-if="selectedAircraft.imagenes.length > 1"
-                type="button"
-                @click="prevImage"
-              >
-                ‹
-              </button>
-              <button
-                v-if="selectedAircraft.imagenes.length > 1"
-                type="button"
-                @click="nextImage"
-              >
-                ›
-              </button>
-              <button type="button" @click="closeModal">
-                {{ content.modal.close }}
-              </button>
-            </div>
-          </div>
-
-          <div class="modal-info">
-            <span class="aircraft-category">{{ getAircraftCategoryLabel(selectedAircraft) }}</span>
-            <h2>{{ selectedAircraft.nombre }}</h2>
-
-            <div class="modal-specs">
-              <div>
-                <span>{{ content.modal.passengers }}</span>
-                <strong>{{ selectedAircraft.capacidad_pasajeros }}</strong>
-              </div>
-              <div>
-                <span>{{ content.modal.range }}</span>
-                <strong>{{ selectedAircraft.alcance_horas }} hrs</strong>
-              </div>
-              <div>
-                <span>{{ content.modal.rate }}</span>
-                <strong>${{ selectedAircraft.precio_renta_usd }} / hr</strong>
-              </div>
-            </div>
-
-            <p>{{ getAircraftDescription(selectedAircraft) }}</p>
-
-            <button
-              class="quote-button quote-button--modal"
-              type="button"
-              @click="goToQuote(selectedAircraft)"
-            >
-              {{ content.actions.quote }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </transition>
 </template>
 
 <script setup>
@@ -605,7 +576,9 @@ const filterLabels = computed(() => ({
 }));
 
 const assetUrl = (path = "") =>
-  `${import.meta.env.BASE_URL}${String(path).replace(/^\/+/, "")}`;
+  /^(?:https?:)?\/\//i.test(String(path || "").trim())
+    ? String(path).trim()
+    : `${import.meta.env.BASE_URL}${String(path).replace(/^\/+/, "")}`;
 
 const tryParseJson = (value) => {
   if (typeof value !== "string") return value;
@@ -1042,7 +1015,7 @@ const loadFleet = async () => {
 const loadAirportLabels = async () => {
   const [{ data: national }, { data: international }] = await Promise.all([
     supabase.from("aeropuertos_mexico").select("IATA, CIUDAD, AEROPUERTO"),
-    supabase.from("airports_geo").select("iata, city, name"),
+    supabase.from("airports_geo").select("*"),
   ]);
 
   const nextLabels = {};
@@ -1056,9 +1029,9 @@ const loadAirportLabels = async () => {
   });
 
   (international || []).forEach((airport) => {
-    const code = String(airport?.iata || "").trim().toUpperCase();
-    const city = String(airport?.city || "").trim();
-    const name = String(airport?.name || "").trim();
+    const code = String(airport?.iata || airport?.IATA || "").trim().toUpperCase();
+    const city = String(airport?.city || airport?.CIUDAD || airport?.ciudad || "").trim();
+    const name = String(airport?.name || airport?.AEROPUERTO || airport?.aeropuerto || "").trim();
     if (!code || nextLabels[code]) return;
     nextLabels[code] = city ? `${city} (${code})` : name ? `${name} (${code})` : `Base ${code}`;
   });
@@ -1228,12 +1201,14 @@ onBeforeUnmount(() => stopAutoSlide());
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 72% center;
+  transform: scale(1.02);
 }
 
 .fleet-hero__overlay {
   background:
-    linear-gradient(90deg, rgba(5, 17, 29, 0.94) 0%, rgba(5, 17, 29, 0.62) 42%, rgba(5, 17, 29, 0.34) 100%),
-    linear-gradient(180deg, rgba(5, 17, 29, 0.22) 0%, rgba(5, 17, 29, 0.82) 100%);
+    linear-gradient(90deg, rgba(5, 17, 29, 0.72) 0%, rgba(5, 17, 29, 0.4) 36%, rgba(5, 17, 29, 0.12) 72%, rgba(5, 17, 29, 0.04) 100%),
+    linear-gradient(180deg, rgba(5, 17, 29, 0.1) 0%, rgba(5, 17, 29, 0.56) 100%);
 }
 
 .fleet-hero__content {
@@ -2075,6 +2050,10 @@ onBeforeUnmount(() => stopAutoSlide());
 }
 
 @media (max-width: 1100px) {
+  .fleet-hero__image {
+    object-position: 68% center;
+  }
+
   .fleet-hero__stats,
   .fleet-benefits__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2108,6 +2087,11 @@ onBeforeUnmount(() => stopAutoSlide());
 }
 
 @media (max-width: 768px) {
+  .fleet-hero__image {
+    object-position: 62% center;
+    transform: scale(1.04);
+  }
+
   .fleet-shell {
     width: min(100% - 32px, 1240px);
   }

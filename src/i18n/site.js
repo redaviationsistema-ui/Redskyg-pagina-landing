@@ -86,6 +86,11 @@ export const LOCALE_CONFIG = {
           description:
             "Consulta información relevante sobre aeropuertos, accesos y coordinación operativa para viajes de aviación privada.",
         },
+        lookbooks: {
+          title: "Biblioteca de Aeronaves | Sky Group Aviation",
+          description:
+            "Explora eBooks, fichas técnicas y documentación exclusiva de aeronaves privadas de Sky Group Aviation.",
+        },
         thankYou: {
           title: "Gracias por tu Solicitud | Sky Group Aviation",
           description: "Confirmación de solicitud enviada a Sky Group Aviation.",
@@ -171,6 +176,11 @@ export const LOCALE_CONFIG = {
           description:
             "Review airport and operational information relevant to private aviation routing and executive travel planning.",
         },
+        lookbooks: {
+          title: "Aircraft Library | Sky Group Aviation",
+          description:
+            "Browse private aircraft brochures, technical PDFs and premium aviation guides from Sky Group Aviation.",
+        },
         thankYou: {
           title: "Thank You | Sky Group Aviation",
           description: "Confirmation page for your private flight request.",
@@ -190,6 +200,7 @@ export const PAGE_SEGMENTS = {
   fleet: "fleet",
   reserva: "reserva",
   airports: "airports",
+  lookbooks: "lookbooks",
   thankYou: "thank-you",
 };
 

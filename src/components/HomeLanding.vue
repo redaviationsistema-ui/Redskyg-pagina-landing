@@ -259,6 +259,8 @@
         </div>
       </section>
 
+      <LookbooksView v-if="showLookbooksSection" embedded />
+
       <section class="final-cta">
         <div class="shell final-grid reveal">
           <div>
@@ -304,6 +306,7 @@ import {
   UsersRound,
 } from "lucide-vue-next";
 import MainLayout from "../layouts/MainLayout.vue";
+import LookbooksView from "../views/LookbooksView.vue";
 import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
 
 const props = defineProps({
@@ -373,6 +376,7 @@ const filteredFleetItems = computed(() => {
   if (activeFleetFilter.value === "all") return items;
   return items.filter((item) => item.name === activeFleetFilter.value);
 });
+const showLookbooksSection = computed(() => props.content.lookbooks?.enabled !== false);
 
 const goToReservation = () => {
   router.push(localizedPath("reserva"));
@@ -506,8 +510,8 @@ onBeforeUnmount(() => {
 
 .hero-overlay {
   background:
-    linear-gradient(90deg, rgba(7, 22, 36, 0.9) 0%, rgba(7, 22, 36, 0.5) 54%, rgba(7, 22, 36, 0.24) 100%),
-    linear-gradient(180deg, rgba(7, 22, 36, 0.22), rgba(7, 22, 36, 0.88));
+    linear-gradient(90deg, rgba(7, 22, 36, 0.4) 0%, rgba(7, 22, 36, 0.4) 54%, rgba(7, 22, 36, 0.4) 90%),
+    linear-gradient(180deg, rgba(7, 22, 36, 0.0), rgba(7, 22, 36, 0.0));
 }
 
 .hero-shell {

@@ -17,6 +17,7 @@
           </div>
 
           <form
+            ref="compactFormRef"
             class="availability-card"
             novalidate
             :aria-describedby="compactError ? 'reservation-card-error reservation-card-note' : 'reservation-card-note'"
@@ -126,9 +127,18 @@
 
               <div class="availability-field">
                 <label :for="fieldIds.date">{{ copy.departureLabel }}</label>
-                <div class="field-control">
+                <div
+                  class="field-control field-control--picker"
+                >
                   <CalendarDays aria-hidden="true" />
+                  <button
+                    type="button"
+                    class="field-control__overlay"
+                    :aria-label="copy.departureLabel"
+                    @click="openDatePicker(departureDateInputRef)"
+                  ></button>
                   <input
+                    ref="departureDateInputRef"
                     :id="fieldIds.date"
                     v-model="routes[0].start_date"
                     type="datetime-local"
@@ -231,9 +241,18 @@
 
                 <div class="availability-field">
                   <label :for="fieldIds.returnDate">{{ copy.returnDateLabel }}</label>
-                  <div class="field-control">
+                  <div
+                    class="field-control field-control--picker"
+                  >
                     <CalendarDays aria-hidden="true" />
+                    <button
+                      type="button"
+                      class="field-control__overlay"
+                      :aria-label="copy.returnDateLabel"
+                      @click="openDatePicker(returnDateInputRef)"
+                    ></button>
                     <input
+                      ref="returnDateInputRef"
                       :id="fieldIds.returnDate"
                       v-model="returnRoute.start_date"
                       type="datetime-local"
@@ -276,26 +295,35 @@
 
             <div v-show="activeStep === 1" class="step-panel">
               <div class="availability-field availability-field--wide">
-                <label :for="fieldIds.aircraft">{{ copy.aircraftLabel }}</label>
-                <div class="field-control">
+                <label>{{ copy.selectAircraft }}</label>
+                <div v-if="compactAircraftOptions.length" class="field-control">
                   <PlaneTakeoff aria-hidden="true" />
                   <select
                     :id="fieldIds.aircraft"
                     v-model="routes[0].aircraft_id"
-                    required
-                    :aria-describedby="`${fieldIds.aircraft}-help`"
+                    @change="selectCompactAircraft(getAircraftById(routes[0].aircraft_id))"
                   >
-                    <option value="">{{ copy.selectAircraft }}</option>
+                    <option :value="null">{{ copy.selectAircraft }}</option>
                     <option
                       v-for="aircraft in compactAircraftOptions"
                       :key="aircraft.id"
                       :value="aircraft.id"
                     >
-                      {{ aircraft.name }} - {{ aircraft.capacity_passengers }} pax
+                      {{ aircraft.name }} · {{ aircraft.capacity_passengers || "-" }} pax · {{ getCompactAircraftBaseLabel(aircraft) }}
                     </option>
                   </select>
                 </div>
-                <small :id="`${fieldIds.aircraft}-help`">{{ aircraftHelpText }}</small>
+                <div v-if="selectedAircraft" class="compact-aircraft-summary">
+                  <strong>{{ selectedAircraft.name }}</strong>
+                  <span>
+                    {{ getCompactAircraftTypeLabel(selectedAircraft) }} ·
+                    {{ selectedAircraft.capacity_passengers || "-" }} pax ·
+                    {{ getCompactAircraftBaseLabel(selectedAircraft) }}
+                  </span>
+                  <em>{{ formatCompactCurrency(getAircraftRentalRate(selectedAircraft)) }}</em>
+                </div>
+                <p v-else-if="!compactAircraftOptions.length" class="compact-aircraft-empty">{{ copy.noAircraftOptions }}</p>
+                <small>{{ aircraftHelpText }}</small>
               </div>
             </div>
 
@@ -554,9 +582,13 @@ const copy = computed(() =>
         passenger: "Pasajero",
         passengers: "Pasajeros",
         passengerMeta: "Capacidad sujeta a aeronave",
+        aircraftCategoryLabel: "Categoria de aeronave",
         selectAirport: "Selecciona aeropuerto",
         aircraftLabel: "Aeronave",
         selectAircraft: "Selecciona aeronave",
+        selectAircraftCta: "Elegir aeronave",
+        viewAircraftCta: "Ver aeronaves",
+        noAircraftOptions: "No hay aeronaves disponibles para esa cantidad de pasajeros.",
         nameLabel: "Nombre completo",
         emailLabel: "Correo",
         phoneLabel: "Telefono",
@@ -622,16 +654,16 @@ const copy = computed(() =>
         ],
         whyTitle: "Por que volar con Sky Group?",
         whyDescription:
-          "Con mas de 20 anos de experiencia, ofrecemos soluciones privadas con seguridad, servicio y eficiencia.",
+          "Con años de experiencia, ofrecemos soluciones privadas con seguridad, servicio y eficiencia.",
         whyBullets: [
           "Acceso a mas de 50 aeronaves en Mexico y el mundo",
           "Coordinacion on-demand de charter, manejo y mas",
           "Operaciones 24/7 y servicio personalizado",
           "Compania lider de aviacion privada en Mexico",
         ],
-        proposalTitle: "Tu propuesta sera enviada directo a tu correo",
+        proposalTitle: "Tu propuesta será enviada directamente a nuestros correos",
         proposalDescription:
-          "Cuando verifiquemos disponibilidad, recibiras opciones de aeronave, detalles y precio privado.",
+          "Cuando verifiquemos disponibilidad, recibirás opciones de aeronave, detalles y precio privado.",
         readyCta: "Estoy listo para volar",
         formEyebrow: "Completa tu solicitud",
         formTitle: "Detalles finales para preparar tu propuesta",
@@ -640,6 +672,23 @@ const copy = computed(() =>
         noAircraft: "No se selecciono ninguna aeronave.",
         unavailableAircraft:
           "Esta aeronave ya esta reservada en el rango de tiempo seleccionado.",
+        aircraftCategories: [
+          {
+            key: "helicopter",
+            title: "Helicopteros",
+            description: "Ideal para trayectos cortos y acceso a zonas sin aeropuerto.",
+          },
+          {
+            key: "turboprop",
+            title: "Turbohelices",
+            description: "Excelente equilibrio entre eficiencia y costo para vuelos regionales.",
+          },
+          {
+            key: "light-jet",
+            title: "Light Jets",
+            description: "Para 4-8 pasajeros en vuelos nacionales y regionales.",
+          },
+        ],
       }
     : {
         heroEyebrow: "Private aviation. Real availability.",
@@ -662,9 +711,13 @@ const copy = computed(() =>
         passenger: "Passenger",
         passengers: "Passengers",
         passengerMeta: "Capacity depends on aircraft",
+        aircraftCategoryLabel: "Aircraft category",
         selectAirport: "Select airport",
         aircraftLabel: "Aircraft",
         selectAircraft: "Select aircraft",
+        selectAircraftCta: "Choose aircraft",
+        viewAircraftCta: "View aircraft",
+        noAircraftOptions: "No aircraft are available for that passenger count.",
         nameLabel: "Full name",
         emailLabel: "Email",
         phoneLabel: "Phone",
@@ -748,6 +801,23 @@ const copy = computed(() =>
         noAircraft: "No aircraft selected.",
         unavailableAircraft:
           "This aircraft is already reserved in that time range.",
+        aircraftCategories: [
+          {
+            key: "helicopter",
+            title: "Helicopters",
+            description: "Ideal for short trips and access to locations without an airport.",
+          },
+          {
+            key: "turboprop",
+            title: "Turboprops",
+            description: "A strong balance of efficiency and cost for regional flights.",
+          },
+          {
+            key: "light-jet",
+            title: "Light Jets",
+            description: "For 4-8 passengers on domestic and regional flights.",
+          },
+        ],
       },
 );
 
@@ -755,6 +825,9 @@ const showQuoteModal = ref(false);
 const loading = ref(false);
 const errorMessage = ref("");
 const compactError = ref("");
+const compactFormRef = ref(null);
+const departureDateInputRef = ref(null);
+const returnDateInputRef = ref(null);
 const activeStep = ref(0);
 const tripMode = ref("one-way");
 const routeType = ref("NATIONAL");
@@ -786,6 +859,17 @@ const norm = (value) =>
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const openDatePicker = (inputRef) => {
+  const input = inputRef?.value;
+  if (!input) return;
+
+  input.focus();
+
+  if (typeof input.showPicker === "function") {
+    input.showPicker();
+  }
 };
 
 const getAircraftCruiseSpeed = (aircraft) =>
@@ -1093,6 +1177,22 @@ const selectedAircraftSummary = computed(() =>
     : "-",
 );
 
+const getCompactAircraftTypeLabel = (aircraft) =>
+  aircraft?.aircraft_type || aircraft?.type || (isSpanish.value ? "Aeronave privada" : "Private aircraft");
+
+const getCompactAircraftBaseLabel = (aircraft) =>
+  aircraft?.home_base ||
+  aircraft?.base ||
+  aircraft?.iata ||
+  (isSpanish.value ? "Base por confirmar" : "Base to be confirmed");
+
+const formatCompactCurrency = (value) =>
+  new Intl.NumberFormat(isSpanish.value ? "es-MX" : "en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(toNumber(value, 0));
+
 const routeSummary = computed(() => {
   const routeItem = routes.value[0] || {};
   return `${routeItem.fromAirport || "-"} -> ${routeItem.toAirport || "-"} / ${routeItem.passengers || 1} ${copy.value.passengers}`;
@@ -1215,7 +1315,10 @@ const swapReturnRoute = () => {
 };
 
 const goToFullForm = () => {
-  form.flightType ||= "Private Jet";
+  compactFormRef.value?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
 };
 
 const addCompactFlight = () => {
@@ -1290,6 +1393,18 @@ const syncReturnEndDate = () => {
   routeItem.end_date = routeItem.start_date;
 };
 
+const selectCompactAircraft = (aircraft) => {
+  if (!aircraft?.id) return;
+
+  routes.value[0].aircraft_id = aircraft.id;
+
+  if (routes.value[1]) {
+    routes.value[1].aircraft_id = aircraft.id;
+  }
+
+  compactError.value = "";
+};
+
 const validateCompactStep = (step = activeStep.value) => {
   compactError.value = "";
 
@@ -1344,8 +1459,6 @@ const goToStep = (step) => {
 };
 
 const handleCompactSubmit = () => {
-  goToFullForm();
-
   if (!validateCompactStep()) return;
 
   if (activeStep.value < 3) {
@@ -2773,11 +2886,30 @@ watch(
   min-width: 0;
 }
 
+.field-control--picker {
+  cursor: pointer;
+}
+
+.field-control__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.field-control__overlay:focus-visible {
+  outline: 2px solid rgba(240, 200, 117, 0.82);
+  outline-offset: 2px;
+}
+
 .field-control > svg {
   position: absolute;
   left: 16px;
   top: 50%;
-  z-index: 1;
+  z-index: 3;
   width: 18px;
   height: 18px;
   color: #ffffff;
@@ -2806,6 +2938,13 @@ watch(
   padding-right: 14px;
   font-size: 0.82rem;
   letter-spacing: 0;
+  color-scheme: dark;
+  pointer-events: none;
+}
+
+.availability-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
 }
 
 .plain-input {
@@ -2857,6 +2996,45 @@ watch(
   max-width: 620px;
   margin: 0 auto;
   width: 100%;
+}
+
+.compact-aircraft-summary {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.compact-aircraft-summary strong {
+  color: #ffffff;
+  font-size: 0.96rem;
+}
+
+.compact-aircraft-summary span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.compact-aircraft-summary em {
+  color: var(--gold-2);
+  font-size: 0.84rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.compact-aircraft-empty {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.78);
+  text-align: center;
+  font-size: 0.95rem;
 }
 
 .contact-grid {

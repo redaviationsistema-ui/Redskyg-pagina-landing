@@ -250,8 +250,8 @@ onBeforeUnmount(() => observer?.disconnect());
 
 .pricing-hero__overlay {
   background:
-    linear-gradient(90deg, rgba(7, 22, 36, 0.88), rgba(7, 22, 36, 0.36)),
-    linear-gradient(180deg, rgba(7, 22, 36, 0.1), rgba(7, 22, 36, 0.86));
+    linear-gradient(90deg, rgba(7, 22, 36, 0.00), rgba(7, 22, 36, 0.18)),
+    linear-gradient(180deg, rgba(7, 22, 36, 0.08), rgba(7, 22, 36, 0.64));
 }
 
 .pricing-hero__content {

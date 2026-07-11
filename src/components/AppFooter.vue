@@ -439,4 +439,12 @@ const handlePhone = (number) => {
     align-items: stretch;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .newsletter-form button,
+  .footer-whatsapp,
+  .footer-social a {
+    transition-duration: 0.01ms !important;
+  }
+}
 </style>
