@@ -570,54 +570,61 @@ onBeforeUnmount(() => {
 
 .hero-actions {
   margin-top: 2rem;
+  width: min(940px, 100%);
 }
 
 .action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 56px;
-  padding: 0.95rem 1.25rem;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  font-size: 0.82rem;
+  gap: 14px;
+  min-height: 72px;
+  flex: 1 1 320px;
+  padding: 1.05rem 1.8rem;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 163, 74, 0.56);
+  font-size: 0.95rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   text-decoration: none;
   transition:
-    transform 0.22s ease,
-    border-color 0.22s ease,
-    background 0.22s ease,
-    box-shadow 0.22s ease;
+    transform 250ms ease,
+    border-color 250ms ease,
+    background 250ms ease,
+    box-shadow 250ms ease,
+    filter 250ms ease;
 }
 
 .action svg,
 .text-link svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex: 0 0 auto;
 }
 
 .action--primary {
   cursor: pointer;
-  background: #ffffff;
-  color: var(--ink);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+  background: linear-gradient(135deg, #d4a34a, #efc66e);
+  color: #11161f;
+  box-shadow: 0 18px 44px rgba(212, 163, 74, 0.26);
 }
 
 .action--ghost {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(14px);
+  color: #11161f;
+  background: linear-gradient(135deg, #d4a34a, #efc66e);
+  box-shadow: 0 18px 44px rgba(212, 163, 74, 0.26);
 }
 
 .action:hover,
 .text-link:hover,
 .phone-link:hover {
   transform: translateY(-2px);
+}
+
+.action:hover {
+  filter: brightness(1.04);
+  box-shadow: 0 24px 48px rgba(212, 163, 74, 0.34);
 }
 
 .hero-brief {
@@ -1088,10 +1095,11 @@ onBeforeUnmount(() => {
   min-width: 0;
   margin: 0;
   padding: 20px 20px 18px;
-  border: 1px solid rgba(23, 90, 143, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 24px 60px rgba(17, 44, 71, 0.08);
+  background:
+    linear-gradient(180deg, rgba(27, 36, 48, 0.98), rgba(20, 28, 39, 0.98));
+  box-shadow: 0 24px 60px rgba(7, 15, 24, 0.22);
   isolation: isolate;
   overflow: hidden;
   transition:
@@ -1102,8 +1110,8 @@ onBeforeUnmount(() => {
 
 .fleet-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(23, 90, 143, 0.2);
-  box-shadow: 0 30px 72px rgba(17, 44, 71, 0.14);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 30px 72px rgba(7, 15, 24, 0.34);
 }
 
 .fleet-card img {
@@ -1116,6 +1124,7 @@ onBeforeUnmount(() => {
   filter: drop-shadow(0 22px 18px rgba(23, 90, 143, 0.18));
   transform: translateY(0) scale(1.08);
   animation: fleetFloat 4.8s ease-in-out infinite;
+  animation-play-state: paused;
   transition:
     filter 0.28s ease,
     transform 0.28s ease;
@@ -1142,7 +1151,7 @@ onBeforeUnmount(() => {
 .fleet-card:hover img {
   filter: drop-shadow(0 30px 24px rgba(23, 90, 143, 0.24));
   transform: translateY(-10px) scale(1.16);
-  animation-play-state: paused;
+  animation-play-state: running;
 }
 
 .fleet-card-body {
@@ -1171,7 +1180,7 @@ onBeforeUnmount(() => {
 
 .fleet-card h3 {
   margin: 0;
-  color: var(--ink);
+  color: #ffffff;
   font-size: 1.05rem;
   font-weight: 900;
   line-height: 1.2;
@@ -1180,7 +1189,7 @@ onBeforeUnmount(() => {
 
 .fleet-card p {
   margin: 0.24rem 0 0;
-  color: var(--muted);
+  color: rgba(234, 241, 248, 0.78);
   font-size: 0.82rem;
   line-height: 1.35;
 }
@@ -1208,7 +1217,7 @@ onBeforeUnmount(() => {
 }
 
 .fleet-stats dt {
-  color: var(--ink);
+  color: #ffffff;
   font-size: 0.76rem;
   font-weight: 900;
   line-height: 1.1;
@@ -1216,7 +1225,7 @@ onBeforeUnmount(() => {
 
 .fleet-stats dd {
   margin: 0;
-  color: var(--muted);
+  color: rgba(234, 241, 248, 0.74);
   font-size: 0.66rem;
   line-height: 1.2;
 }
@@ -1365,7 +1374,7 @@ onBeforeUnmount(() => {
 
 @keyframes aircraftFly {
   0% {
-    transform: translate3d(-160px, 42px, 0) rotate(-8deg) scale(0.88);
+    transform: translate3d(calc(100vw + 220px), 42px, 0) rotate(-8deg) scale(0.88);
   }
 
   48% {
@@ -1373,17 +1382,17 @@ onBeforeUnmount(() => {
   }
 
   100% {
-    transform: translate3d(calc(100vw + 220px), -96px, 0) rotate(-8deg) scale(1.08);
+    transform: translate3d(-160px, -96px, 0) rotate(-8deg) scale(1.08);
   }
 }
 
 @keyframes flightPathDrift {
   0% {
-    transform: translateX(-10vw) rotate(-10deg);
+    transform: translateX(128vw) rotate(-10deg);
   }
 
   100% {
-    transform: translateX(128vw) rotate(-10deg);
+    transform: translateX(-10vw) rotate(-10deg);
   }
 }
 
@@ -1506,12 +1515,27 @@ onBeforeUnmount(() => {
   .final-actions {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
   }
 
   .action,
   .phone-link {
     width: 100%;
-    min-height: 58px;
+    min-height: 40px;
+  }
+
+  .action {
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 0.68rem 0.9rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    border-radius: 12px;
+  }
+
+  .action svg {
+    width: 15px;
+    height: 15px;
   }
 
   .phone-link {
@@ -1532,6 +1556,11 @@ onBeforeUnmount(() => {
 
   .brief-item:first-child {
     border-top: 0;
+  }
+
+  .final-actions .action,
+  .final-actions .phone-link {
+    min-height: 42px;
   }
 
   .signal-row,
@@ -1592,6 +1621,36 @@ onBeforeUnmount(() => {
 
   .trust-mark {
     min-height: 260px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-actions,
+  .final-actions {
+    gap: 6px;
+  }
+
+  .hero-actions {
+    margin-top: 1.25rem;
+  }
+
+  .action,
+  .phone-link {
+    min-height: 36px;
+  }
+
+  .action {
+    flex: 0 0 auto;
+    gap: 7px;
+    padding: 0.58rem 0.8rem;
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+    border-radius: 10px;
+  }
+
+  .action svg {
+    width: 13px;
+    height: 13px;
   }
 }
 </style>

@@ -2134,6 +2134,7 @@ onBeforeUnmount(() => stopAutoSlide());
     flex-wrap: nowrap;
     overflow-x: auto;
     padding-bottom: 4px;
+    gap: 8px;
   }
 
   .fleet-tabs {
@@ -2143,11 +2144,65 @@ onBeforeUnmount(() => stopAutoSlide());
   .fleet-tab,
   .fleet-chip {
     flex: 0 0 auto;
+    min-height: 38px;
+    gap: 8px;
+    font-size: 0.62rem;
+    letter-spacing: 0.07em;
+    border-radius: 10px;
+    box-shadow: 0 8px 18px rgba(7, 21, 38, 0.04);
+  }
+
+  .fleet-tab {
+    padding: 0 14px;
+  }
+
+  .fleet-chip {
+    min-width: 0;
+    padding: 0 14px;
+  }
+
+  .fleet-tab svg,
+  .fleet-chip svg {
+    width: 14px;
+    height: 14px;
   }
 
   .fleet-field--search,
   .fleet-sort {
+    width: auto;
+  }
+
+  .fleet-field > span,
+  .fleet-sort > span {
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+  }
+
+  .fleet-field input,
+  .fleet-field select,
+  .fleet-sort select {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 0.76rem;
+    border-radius: 10px;
+  }
+
+  .fleet-search-icon {
+    left: 12px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .fleet-combobox input {
+    padding-left: 36px;
+  }
+
+  .fleet-toolbar__meta {
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 180px);
+    gap: 10px;
     width: 100%;
+    justify-self: stretch;
+    align-items: end;
   }
 
   .aircraft-row {

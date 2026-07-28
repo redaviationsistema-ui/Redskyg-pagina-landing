@@ -13,7 +13,7 @@ const content = {
     eyebrow: "Private Aviation in Mexico and Worldwide",
     title: "Private flights with executive control from takeoff to arrival.",
     description:
-      "Sky Group coordinates aircraft, crew and route execution for executives, family offices and time-sensitive travel.",
+      "Sky Group LLC coordinates aircraft, crew and route execution for executives, family offices and time-sensitive travel.",
     primaryCta: "Request a Flight",
     secondaryCta: "Talk to an Advisor",
     poster: "images/Home/home2.jpg",

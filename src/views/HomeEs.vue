@@ -13,7 +13,7 @@ const content = {
     eyebrow: "Aviacion privada en Mexico y el mundo",
     title: "Vuelos privados con control ejecutivo de salida a llegada.",
     description:
-      "Sky Group coordina aeronave, tripulacion y ruta para ejecutivos, familias y viajes donde el tiempo no puede esperar.",
+      "Sky Group LLC coordina aeronave, tripulacion y ruta para ejecutivos, familias y viajes donde el tiempo no puede esperar.",
     primaryCta: "Cotizar vuelo ahora",
     secondaryCta: "Recibir cotizacion en minutos",
     poster: "images/Home/home2.jpg",
@@ -74,7 +74,7 @@ const content = {
   },
   experience: {
     eyebrow: "Prueba Social",
-    title: "Momentos reales de vuelo con precision ejecutiva.",
+    title: "Experiencia real con precision y calidad ejecutiva.",
     description: "Salidas ejecutivas, atencion en tierra y cabinas privadas.",
     image: "images/Home/home3.jpg",
     alt: "Cabina privada",

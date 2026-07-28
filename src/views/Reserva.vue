@@ -334,7 +334,6 @@
                     {{ selectedAircraft.capacity_passengers || "-" }} pax ·
                     {{ getCompactAircraftBaseLabel(selectedAircraft) }}
                   </span>
-                  <em>{{ formatCompactCurrency(getAircraftRentalRate(selectedAircraft)) }}</em>
                 </div>
                 <p v-else-if="!compactAircraftOptions.length" class="compact-aircraft-empty">{{ copy.noAircraftOptions }}</p>
                 <small>{{ aircraftHelpText }}</small>
@@ -516,6 +515,7 @@ import { generateReservationPDF } from "@/utils/pdfGenerator";
 const AIRCRAFT_TABLE = "aircraft_fleet";
 const COMMERCIAL_MARGIN_RATE = 0.15;
 const OTHER_CHARGES_DEFAULT = 0;
+const HELICOPTER_MAX_LEG_DISTANCE_NM = 200;
 const AIRCRAFT_TYPE_OPERATIONAL_MARGINS = {
   HELICOPTERO: {
     operationalMarginMinutes: 15,
@@ -583,7 +583,7 @@ const copy = computed(() =>
         selectFlightsTitle: "1. Selecciona tus vuelos",
         tripTypeLabel: "Tipo de viaje",
         oneWayLabel: "Solo ida",
-        roundTripLabel: "Redondo",
+        roundTripLabel: "Vuelos múltiples",
         addFlightLabel: "Agregar otro vuelo",
         returnFlightLabel: "Vuelo de regreso",
         removeReturnLabel: "Quitar vuelo de regreso",
@@ -1166,6 +1166,9 @@ const compactAircraftOptions = computed(() => {
 
   return aircraftFleet.value
     .filter((aircraft) => toNumber(aircraft.capacity_passengers, 0) >= passengers)
+    .filter((aircraft) =>
+      hasLongHelicopterLeg.value ? !isHelicopterAircraft(aircraft) : true,
+    )
     .filter((aircraft) => {
       const key = [
         norm(aircraft.name),
@@ -1492,6 +1495,17 @@ const validateCompactStep = (step = activeStep.value) => {
     return false;
   }
 
+  if (
+    step === 1 &&
+    hasLongHelicopterLeg.value &&
+    isHelicopterAircraft(getAircraftById(routes.value[0]?.aircraft_id))
+  ) {
+    compactError.value = isSpanish.value
+      ? "La ruta seleccionada incluye un tramo mayor de 200 NM. Selecciona una aeronave distinta a helicóptero."
+      : "The selected route includes a leg longer than 200 NM. Please select an aircraft other than a helicopter.";
+    return false;
+  }
+
   if (step === 2) {
     if (!isContactComplete.value) {
       compactError.value = copy.value.missingContact;
@@ -1594,6 +1608,10 @@ const getAircraftById = (id) =>
   aircraftFleet.value.find(
     (aircraft) => String(aircraft.id) === String(id),
   );
+const isHelicopterAircraft = (aircraft) => {
+  const aircraftType = norm(aircraft?.aircraft_type || aircraft?.type || "");
+  return aircraftType.includes("HELICOP");
+};
 const getAircraftName = (id) => getAircraftById(id)?.name || "";
 const getPrimaryAircraftId = () => routes.value[0]?.aircraft_id || null;
 const getRouteAircraftId = (routeItem) =>
@@ -1683,6 +1701,38 @@ const getRouteAirport = (airportName) =>
         (airportName || "").toUpperCase() ||
       airport.aeropuerto === airportName,
   );
+
+const getRouteLegDistanceNm = (routeItem) => {
+  if (!routeItem?.fromAirport || !routeItem?.toAirport) return null;
+
+  const from = findAirportForRoute(routeItem, "from");
+  const to = findAirportForRoute(routeItem, "to");
+
+  if (!from || !to) return null;
+
+  const fromLat = Number(from.lat);
+  const fromLng = Number(from.lng);
+  const toLat = Number(to.lat);
+  const toLng = Number(to.lng);
+
+  if (
+    !Number.isFinite(fromLat) ||
+    !Number.isFinite(fromLng) ||
+    !Number.isFinite(toLat) ||
+    !Number.isFinite(toLng)
+  ) {
+    return null;
+  }
+
+  return getDistanceNM(fromLat, fromLng, toLat, toLng);
+};
+
+const hasLongHelicopterLeg = computed(() =>
+  routes.value.some((routeItem) => {
+    const distanceNm = getRouteLegDistanceNm(routeItem);
+    return distanceNm !== null && distanceNm > HELICOPTER_MAX_LEG_DISTANCE_NM;
+  }),
+);
 
 const getAircraftBaseAirport = (aircraftId) => {
   const aircraft = getAircraftById(aircraftId);
@@ -2554,6 +2604,21 @@ const resetForm = () => {
   returnToBaseEnabled.value = false;
   routes.value = [emptyRoute()];
 };
+
+watch(
+  () => [hasLongHelicopterLeg.value, routes.value[0]?.aircraft_id],
+  ([hasLongLeg, aircraftId]) => {
+    if (!hasLongLeg || !aircraftId) return;
+
+    const selectedAircraft = getAircraftById(aircraftId);
+    if (!isHelicopterAircraft(selectedAircraft)) return;
+
+    routes.value[0].aircraft_id = null;
+    routes.value.slice(1).forEach((routeItem) => {
+      routeItem.aircraft_id = null;
+    });
+  },
+);
 
 watch(
   () => [

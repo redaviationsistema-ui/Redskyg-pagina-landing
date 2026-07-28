@@ -17,7 +17,7 @@ const content = {
   intro: {
     kicker: "Coleccion de aviacion privada",
     title:
-      "Aeronaves seleccionadas para viajes ejecutivos, flexibilidad y confort",
+      "Aeronaves seleccionadas para viajes ejecutivos con flexibilidad y confort",
     description:
       "Explora nuestra flota activa y revisa disponibilidad de un vistazo antes de solicitar una cotizacion personalizada.",
     totalLabel: "aeronaves activas",
