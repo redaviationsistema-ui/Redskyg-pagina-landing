@@ -11,9 +11,15 @@ const content = {
   },
   hero: {
     eyebrow: "Private Aviation in Mexico and Worldwide",
-    title: "Private flights with executive control from takeoff to arrival.",
+    title: "Private Flights with executive control from takeoff to arrival.",
     description:
       "Sky Group LLC coordinates aircraft, crew and route execution for executives, family offices and time-sensitive travel.",
+    benefits: [
+      "Immediate availability",
+      "Security and confidentiality",
+      "Personalized attention 24/7",
+      "Concierge service",
+    ],
     primaryCta: "Request a Flight",
     secondaryCta: "Talk to an Advisor",
     poster: "images/Home/home2.jpg",

@@ -11,9 +11,15 @@ const content = {
   },
   hero: {
     eyebrow: "Aviacion privada en Mexico y el mundo",
-    title: "Vuelos privados con control ejecutivo de salida a llegada.",
+    title: "Vuelo Privado con control ejecutivo de salida a llegada.",
     description:
       "Sky Group LLC coordina aeronave, tripulacion y ruta para ejecutivos, familias y viajes donde el tiempo no puede esperar.",
+    benefits: [
+      "Disponibilidad inmediata",
+      "Seguridad y confidencialidad",
+      "Atencion personalizada 24/7",
+      "Servicio Concierge",
+    ],
     primaryCta: "Cotizar vuelo ahora",
     secondaryCta: "Recibir cotizacion en minutos",
     poster: "images/Home/home2.jpg",

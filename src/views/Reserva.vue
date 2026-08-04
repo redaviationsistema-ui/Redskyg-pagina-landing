@@ -2,11 +2,18 @@
   <MainLayout>
     <div class="reservation-landing">
       <section class="reservation-hero" aria-labelledby="reservation-title">
-        <img
-          class="reservation-hero__image"
-          src="/images/reserva/1.png"
-          alt="Private jet ready for departure"
-        />
+        <video
+          class="reservation-hero__video reservation-hero__video--desktop"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          poster="/images/reserva/1.png"
+          aria-hidden="true"
+        >
+          <source src="/images/reserva/Video.mp4" type="video/mp4" />
+        </video>
         <div class="reservation-hero__shade"></div>
 
         <div class="reservation-shell reservation-hero__content">
@@ -399,11 +406,25 @@
               <span>{{ compactSubmitLabel }}</span>
               <ChevronRight aria-hidden="true" />
             </button>
-            <p id="reservation-card-note" class="availability-note">
-              <LockKeyhole aria-hidden="true" />
-              <span>{{ copy.secureNote }}</span>
-            </p>
+          <p id="reservation-card-note" class="availability-note">
+            <LockKeyhole aria-hidden="true" />
+            <span>{{ copy.secureNote }}</span>
+          </p>
           </form>
+
+          <video
+            ref="mobileHeroVideoRef"
+            class="reservation-hero__video reservation-hero__video--mobile-inline"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="metadata"
+            poster="/images/reserva/1.png"
+            aria-hidden="true"
+          >
+            <source src="/images/reserva/Video.mp4" type="video/mp4" />
+          </video>
         </div>
       </section>
 
@@ -490,7 +511,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { supabase } from "../supabase";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -521,41 +542,49 @@ const AIRCRAFT_TYPE_OPERATIONAL_MARGINS = {
     operationalMarginMinutes: 15,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
+    overnightFeeUsd: 350,
   },
   "MONOMOTOR PISTON": {
     operationalMarginMinutes: 15,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
+    overnightFeeUsd: 250,
   },
   TURBOHELICE: {
     operationalMarginMinutes: 20,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
+    overnightFeeUsd: 450,
   },
   "JET LIGERO (LIGHT JET)": {
     operationalMarginMinutes: 30,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
+    overnightFeeUsd: 650,
   },
   "MIDSIZE JET (MID JET)": {
     operationalMarginMinutes: 30,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
+    overnightFeeUsd: 850,
   },
   "SUPER MIDSIZE JET": {
     operationalMarginMinutes: 35,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
+    overnightFeeUsd: 1000,
   },
   "HEAVY JET": {
     operationalMarginMinutes: 40,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
+    overnightFeeUsd: 1200,
   },
   "REGIONAL JET": {
     operationalMarginMinutes: 40,
     applyCommercialMargin: true,
     commercialMarginPercent: 15,
+    overnightFeeUsd: 950,
   },
 };
 const AIRCRAFT_MODEL_PRICING_OVERRIDES = {
@@ -840,6 +869,7 @@ const loading = ref(false);
 const errorMessage = ref("");
 const compactError = ref("");
 const compactFormRef = ref(null);
+const mobileHeroVideoRef = ref(null);
 const departureDateInputRef = ref(null);
 const extraRouteDateInputRefs = ref({});
 const activeStep = ref(0);
@@ -873,6 +903,20 @@ const norm = (value) =>
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const MOBILE_HERO_LOOP_SECONDS = 26;
+
+const syncMobileHeroVideoLoop = () => {
+  const video = mobileHeroVideoRef.value;
+  if (!video) return;
+
+  const limit = Math.min(MOBILE_HERO_LOOP_SECONDS, video.duration || MOBILE_HERO_LOOP_SECONDS);
+
+  if (video.currentTime >= limit) {
+    video.currentTime = 0;
+    video.play().catch(() => {});
+  }
 };
 
 const openDatePicker = (inputRef) => {
@@ -965,6 +1009,15 @@ const getAircraftPricingDefaults = (aircraft) => {
   const fallbackOtherChargesUsd =
     toNumber(namedDefaults.otherChargesUsd) ||
     toNumber(typeDefaults.otherChargesUsd);
+  const rentalRateUsd = getAircraftRentalRate(aircraft);
+  const derivedOvernightFeeUsd =
+    rentalRateUsd > 0 ? Number((rentalRateUsd / 2).toFixed(2)) : 0;
+  const aircraftOvernightFeeUsd = toNumber(
+    aircraft?.overnight_fee_usd ??
+      aircraft?.overnightFeeUsd ??
+      aircraft?.crew_overnight_usd ??
+      aircraft?.crewOvernightUsd,
+  );
 
   return {
     operationalMarginMinutes: fallbackOperationalMarginMinutes,
@@ -984,13 +1037,10 @@ const getAircraftPricingDefaults = (aircraft) => {
         aircraft?.international_expenses_usd,
       fallbackAirportFeesUsd,
     ),
-    overnightFeeUsd: toNumber(
-      aircraft?.overnight_fee_usd ??
-        aircraft?.overnightFeeUsd ??
-        aircraft?.crew_overnight_usd ??
-        aircraft?.crewOvernightUsd,
-      fallbackOvernightFeeUsd,
-    ),
+    overnightFeeUsd:
+      aircraftOvernightFeeUsd > 0
+        ? aircraftOvernightFeeUsd
+        : derivedOvernightFeeUsd || fallbackOvernightFeeUsd,
     otherChargesUsd: toNumber(
       aircraft?.other_charges_usd ??
         aircraft?.otherChargesUsd,
@@ -1162,27 +1212,21 @@ const compactDateMeta = computed(() =>
 
 const compactAircraftOptions = computed(() => {
   const passengers = toNumber(routes.value[0]?.passengers, 1);
-  const seen = new Set();
 
   return aircraftFleet.value
     .filter((aircraft) => toNumber(aircraft.capacity_passengers, 0) >= passengers)
     .filter((aircraft) =>
       hasLongHelicopterLeg.value ? !isHelicopterAircraft(aircraft) : true,
     )
-    .filter((aircraft) => {
-      const key = [
-        norm(aircraft.name),
-        toNumber(aircraft.capacity_passengers, 0),
-      ].join("|");
-
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
     .slice()
-    .sort((left, right) =>
-      String(left.name || "").localeCompare(String(right.name || "")),
-    );
+    .sort((left, right) => {
+      const nameCompare = String(left.name || "").localeCompare(String(right.name || ""));
+      if (nameCompare !== 0) return nameCompare;
+
+      return String(getCompactAircraftBaseLabel(left) || "").localeCompare(
+        String(getCompactAircraftBaseLabel(right) || ""),
+      );
+    });
 });
 
 const selectedAircraft = computed(() => getAircraftById(routes.value[0]?.aircraft_id));
@@ -1831,12 +1875,24 @@ const buildPositioningRoute = (
   };
 };
 
-const getRouteNights = (routeItem) => {
-  if (!routeItem?.start_date || !routeItem?.end_date) return 0;
+const getRouteNights = (routeItem, routeIndex, routeList = []) => {
+  if (!routeItem?.start_date || routeItem?.positioning) return 0;
+
+  const nextRoute = routeList[routeIndex + 1];
+  if (!nextRoute?.start_date || nextRoute?.positioning) return 0;
 
   const start = new Date(routeItem.start_date);
-  const end = new Date(routeItem.end_date);
-  return Math.max(0, (end - start) / 86400000);
+  const nextStart = new Date(nextRoute.start_date);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(nextStart.getTime())) return 0;
+
+  const startDay = new Date(start);
+  startDay.setHours(0, 0, 0, 0);
+
+  const nextStartDay = new Date(nextStart);
+  nextStartDay.setHours(0, 0, 0, 0);
+
+  return Math.max(0, Math.round((nextStartDay - startDay) / 86400000));
 };
 
 const isInternationalFlight = computed(() => {
@@ -1910,6 +1966,12 @@ onMounted(() => {
   if (flightType) {
     form.flightType = flightType;
   }
+
+  mobileHeroVideoRef.value?.addEventListener("timeupdate", syncMobileHeroVideoLoop);
+});
+
+onBeforeUnmount(() => {
+  mobileHeroVideoRef.value?.removeEventListener("timeupdate", syncMobileHeroVideoLoop);
 });
 
 const toRad = (deg) => (deg * Math.PI) / 180;
@@ -2014,7 +2076,7 @@ const getDistanceNM = (lat1, lon1, lat2, lon2) => {
   return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) / 1.852;
 };
 
-const calculatePrice = (routeItem) => {
+const calculatePrice = (routeItem, routeIndex = 0, routeList = []) => {
   const aircraft = getAircraftById(getRouteAircraftId(routeItem));
   const from = findAirportForRoute(routeItem, "from");
   const to = findAirportForRoute(routeItem, "to");
@@ -2100,7 +2162,7 @@ const calculatePrice = (routeItem) => {
 
   const flightCostRaw = hours * getAircraftRentalRate(aircraft);
   const flightCost = Number(flightCostRaw.toFixed(2));
-  const nights = getRouteNights(routeItem);
+  const nights = getRouteNights(routeItem, routeIndex, routeList);
   const overnightRate = pricingDefaults.overnightFeeUsd;
   const overnightCost = Number((nights * overnightRate).toFixed(2));
   const operationalCost = pricingDefaults.airportFeesUsd;
@@ -2137,7 +2199,9 @@ const validRoutes = computed(() =>
 );
 
 const priceBreakdowns = computed(() =>
-  validRoutes.value.map((routeItem) => calculatePrice(routeItem)),
+  validRoutes.value.map((routeItem, index, routeList) =>
+    calculatePrice(routeItem, index, routeList),
+  ),
 );
 
 const pricedRoutes = computed(() => {
@@ -2188,7 +2252,9 @@ const pricedRoutes = computed(() => {
 });
 
 const pricedBreakdowns = computed(() =>
-  pricedRoutes.value.map((routeItem) => calculatePrice(routeItem)),
+  pricedRoutes.value.map((routeItem, index, routeList) =>
+    calculatePrice(routeItem, index, routeList),
+  ),
 );
 
 const summarizeRouteBreakdowns = (routeItems, breakdownItems) =>
@@ -2700,23 +2766,32 @@ watch(
   padding-top: 132px;
 }
 
-.reservation-hero__image,
+.reservation-hero__video,
 .reservation-hero__shade {
   position: absolute;
   inset: 0;
 }
 
-.reservation-hero__image {
+.reservation-hero__video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 42%;
+  object-position: center center;
+  filter: brightness(0.78) contrast(1.12) saturate(0.92);
+}
+
+.reservation-hero__video--mobile {
+  display: none;
+}
+
+.reservation-hero__video--mobile-inline {
+  display: none;
 }
 
 .reservation-hero__shade {
   background:
-    linear-gradient(90deg, rgba(5, 9, 13, 0.9) 0%, rgba(5, 9, 13, 0.58) 42%, rgba(5, 9, 13, 0.14) 100%),
-    linear-gradient(180deg, rgba(5, 9, 13, 0.18), rgba(5, 9, 13, 0.28) 44%, rgba(5, 9, 13, 0.72) 100%);
+    linear-gradient(90deg, rgba(5, 9, 13, 0.12) 0%, rgba(5, 9, 13, 0.12) 28%, rgba(5, 9, 13, 0) 52%),
+    linear-gradient(180deg, rgba(5, 9, 13, 0) 0%, rgba(5, 9, 13, 0.1) 22%, rgba(5, 9, 13, 0.42) 100%);
 }
 
 .reservation-hero__content {
@@ -2773,6 +2848,7 @@ watch(
 .availability-card {
   background:
     linear-gradient(180deg, rgba(7, 13, 17, 0.66), rgba(4, 9, 12, 0.52));
+  backdrop-filter: none;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -3504,11 +3580,47 @@ watch(
 
   .reservation-hero__content {
     min-height: auto;
-    padding-bottom: 32px;
+    align-content: start;
+    padding-bottom: 40px;
   }
 
   .reservation-copy {
-    padding-bottom: 34px;
+    position: relative;
+    z-index: 2;
+    max-width: none;
+    padding-bottom: 0;
+  }
+
+  .reservation-hero__video--desktop {
+    display: none;
+  }
+
+  .reservation-hero__video--mobile {
+    display: none;
+  }
+
+  .reservation-hero__video--mobile-inline {
+    display: block;
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    object-position: center 34%;
+    border-radius: 18px;
+    background: #05090d;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+    margin-top: 18px;
+  }
+
+  .reservation-hero__shade {
+    background:
+      linear-gradient(180deg, rgba(5, 9, 13, 0.14) 0%, rgba(5, 9, 13, 0) 18%, rgba(5, 9, 13, 0.52) 100%);
+  }
+
+  .availability-card {
+    margin-top: 18px;
   }
 
   .steps {

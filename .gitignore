@@ -10,7 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist.zip
 *.local
+public/images/reserva/RA1.mp4
 
 # Editor directories and files
 .vscode/*

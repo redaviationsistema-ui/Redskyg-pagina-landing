@@ -7,30 +7,44 @@
       ></div>
 
       <section class="hero" aria-labelledby="home-hero-title">
-        <video
-          ref="heroVideo"
-          class="hero-media"
-          :style="{ transform: `scale(1.04) translateY(${heroParallax}px)` }"
-          :autoplay="enableHeroVideo"
-          muted
-          loop
-          playsinline
-          preload="metadata"
-          :poster="assetUrl(content.hero.poster)"
+        <div
+          class="hero-media-wrap"
+          :style="{ transform: `translateY(${heroParallax}px)` }"
         >
-          <source
-            v-if="enableHeroVideo"
-            :src="assetUrl(content.hero.video)"
-            type="video/mp4"
-          />
-        </video>
+          <video
+            ref="heroVideo"
+            class="hero-media"
+            :autoplay="enableHeroVideo"
+            muted
+            loop
+            playsinline
+            preload="metadata"
+            :poster="assetUrl(content.hero.poster)"
+          >
+            <source
+              v-if="enableHeroVideo"
+              :src="assetUrl(content.hero.video)"
+              type="video/mp4"
+            />
+          </video>
+        </div>
         <div class="hero-overlay"></div>
 
         <div class="shell hero-shell">
           <div class="hero-copy reveal">
             <span class="eyebrow eyebrow--light">{{ content.hero.eyebrow }}</span>
-            <h1 id="home-hero-title">{{ content.hero.title }}</h1>
+            <h1 id="home-hero-title" v-html="renderHeroTitle(content.hero.title)"></h1>
             <p>{{ content.hero.description }}</p>
+            <div class="hero-benefits" aria-label="Hero benefits">
+              <div
+                v-for="item in content.hero.benefits"
+                :key="item"
+                class="hero-benefit"
+              >
+                <CheckCircle2 aria-hidden="true" />
+                <span>{{ item }}</span>
+              </div>
+            </div>
 
             <div class="hero-actions" aria-label="Primary actions">
               <button class="action action--primary" type="button" @click="goToReservation">
@@ -378,6 +392,24 @@ const filteredFleetItems = computed(() => {
 });
 const showLookbooksSection = computed(() => props.content.lookbooks?.enabled !== false);
 
+const renderHeroTitle = (title = "") => {
+  if (title.includes("Vuelo Privado")) {
+    return title.replace(
+      "Vuelo Privado",
+      '<span class="hero-highlight">Vuelo Privado</span>',
+    );
+  }
+
+  if (title.includes("Private Flights")) {
+    return title.replace(
+      "Private Flights",
+      '<span class="hero-highlight">Private Flights</span>',
+    );
+  }
+
+  return title;
+};
+
 const goToReservation = () => {
   router.push(localizedPath("reserva"));
 };
@@ -494,29 +526,45 @@ onBeforeUnmount(() => {
   background: var(--navy);
 }
 
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 21%;
+  background: linear-gradient(180deg, rgba(7, 22, 36, 0), rgba(7, 22, 36, 0.92));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-media-wrap,
 .hero-media,
 .hero-overlay {
   position: absolute;
   inset: 0;
 }
 
-.hero-media {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.hero-media-wrap {
   will-change: transform;
   transition: transform 0.18s linear;
 }
 
+.hero-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1);
+  transform-origin: center center;
+  animation: heroVideoZoom 18s ease-in-out infinite alternate;
+}
+
 .hero-overlay {
   background:
-    linear-gradient(90deg, rgba(7, 22, 36, 0.4) 0%, rgba(7, 22, 36, 0.4) 54%, rgba(7, 22, 36, 0.4) 90%),
-    linear-gradient(180deg, rgba(7, 22, 36, 0.0), rgba(7, 22, 36, 0.0));
+    linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 48%, rgba(0, 0, 0, 0.4) 100%);
 }
 
 .hero-shell {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-content: end;
@@ -526,7 +574,20 @@ onBeforeUnmount(() => {
 }
 
 .hero-copy {
+  position: relative;
+  isolation: isolate;
   max-width: 850px;
+  padding: 16px 0 0;
+}
+
+.hero-copy::before {
+  content: "";
+  position: absolute;
+  inset: -32px auto -42px -28px;
+  width: min(35vw, 540px);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.3), transparent);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .eyebrow {
@@ -545,20 +606,57 @@ onBeforeUnmount(() => {
 }
 
 .hero h1 {
-  margin: 1rem 0 1.1rem;
+  margin: 0.8rem 0 0.9rem;
   color: #ffffff;
-  font-size: clamp(3.1rem, 7vw, 6.7rem);
-  line-height: 0.94;
+  font-size: clamp(2.9rem, 6.1vw, 5.8rem);
+  line-height: 0.96;
   letter-spacing: -0.04em;
-  max-width: 960px;
+  max-width: 860px;
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.hero :deep(.hero-highlight) {
+  color: var(--gold);
 }
 
 .hero p {
-  max-width: 680px;
+  max-width: 620px;
   margin: 0;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: clamp(1rem, 1.6vw, 1.2rem);
-  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: clamp(0.98rem, 1.45vw, 1.12rem);
+  line-height: 1.65;
+  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+.hero-benefits {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 1.1rem;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hero-benefits::-webkit-scrollbar {
+  display: none;
+}
+
+.hero-benefit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.hero-benefit svg {
+  width: 16px;
+  height: 16px;
+  color: var(--gold);
+  flex: 0 0 auto;
 }
 
 .hero-actions,
@@ -569,7 +667,7 @@ onBeforeUnmount(() => {
 }
 
 .hero-actions {
-  margin-top: 2rem;
+  margin-top: 1.35rem;
   width: min(940px, 100%);
 }
 
@@ -632,18 +730,22 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
   width: min(760px, 100%);
-  margin-top: 52px;
-  border-top: 1px solid var(--soft-line);
-  border-bottom: 1px solid var(--soft-line);
+  margin-top: 12px;
+  transform: translateY(-40px);
+  padding: 10px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background: rgba(10, 12, 18, 0.42);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(24px);
 }
 
 .brief-item {
-  padding: 20px 24px 20px 0;
+  padding: 18px 24px;
 }
 
 .brief-item + .brief-item {
-  padding-left: 24px;
-  border-left: 1px solid var(--soft-line);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .brief-item strong {
@@ -656,7 +758,7 @@ onBeforeUnmount(() => {
 .brief-item span {
   display: block;
   margin-top: 0.45rem;
-  color: rgba(255, 255, 255, 0.64);
+  color: rgba(255, 255, 255, 0.78);
   font-size: 0.88rem;
   line-height: 1.45;
 }
@@ -1417,6 +1519,16 @@ onBeforeUnmount(() => {
   }
 }
 
+@keyframes heroVideoZoom {
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(1.05);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1511,6 +1623,17 @@ onBeforeUnmount(() => {
     line-height: 1;
   }
 
+  .hero-copy::before {
+    inset: -24px -16px -32px -16px;
+    width: auto;
+  }
+
+  .hero-benefits {
+    gap: 14px;
+    margin-top: 1rem;
+    padding-bottom: 4px;
+  }
+
   .hero-actions,
   .final-actions {
     flex-direction: column;
@@ -1544,14 +1667,15 @@ onBeforeUnmount(() => {
 
   .hero-brief {
     grid-template-columns: 1fr;
-    margin-top: 36px;
+    margin-top: 26px;
+    transform: none;
   }
 
   .brief-item,
   .brief-item + .brief-item {
-    padding: 18px 0;
+    padding: 18px 18px;
     border-left: 0;
-    border-top: 1px solid var(--soft-line);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .brief-item:first-child {

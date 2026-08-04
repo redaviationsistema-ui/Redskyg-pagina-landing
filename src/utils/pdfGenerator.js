@@ -319,7 +319,7 @@ export const generateReservationPDF = async ({
     profileY += 7 + usedLines * 4.2;
   });
 
-  let y = 64 + cardHeight + 11;
+  let y = 64 + cardHeight + 5;
 
   drawSectionTitle(doc, "Flight Legs", 20, y);
   y += 8;
@@ -348,7 +348,7 @@ export const generateReservationPDF = async ({
       : route.fromAirport || "-";
     const fromText = doc.splitTextToSize(fromLabel, 45);
     const toText = doc.splitTextToSize(route.toAirport || "-", 45);
-    const rowHeight = Math.max(fromText.length, toText.length) * 4.8 + 7;
+    const rowHeight = Math.max(fromText.length, toText.length) * 4.4 + 6.2;
 
     if (index % 2 === 0) {
       doc.setFillColor(...COLORS.zebra);
@@ -356,93 +356,98 @@ export const generateReservationPDF = async ({
     }
 
     doc.setFontSize(8.5);
-    doc.text(String(index + 1), 25, y + 7);
-    doc.text(fromText, 38, y + 7);
-    doc.text(toText, 90, y + 7);
+    doc.text(String(index + 1), 25, y + 6.2);
+    doc.text(fromText, 38, y + 6.2);
+    doc.text(toText, 90, y + 6.2);
     doc.text(
       Number(miles).toLocaleString("en-US", {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }),
       140,
-      y + 7,
+      y + 6.2,
       { align: "right" },
     );
-    doc.text(estimatedHHMM, 182, y + 7, { align: "right" });
+    doc.text(estimatedHHMM, 182, y + 6.2, { align: "right" });
 
     doc.setDrawColor(...COLORS.line);
     doc.line(20, y + rowHeight, 190, y + rowHeight);
     y += rowHeight;
   });
 
-  y += 12;
+  y += 4;
 
   drawSectionTitle(doc, "Commercial Breakdown", 20, y);
-  y += 8;
+  y += 6;
 
   const costRows = [
     ["Flight Cost", totals.flight],
-    [
-      `Overnight Crew${totalNights ? ` (${totalNights} ${totalNights === 1 ? "night" : "nights"})` : ""}`,
-      totals.overnight,
-    ],
+    ["Overnight Crew", totals.overnight],
     ["Operational Expenses", totals.expenses],
     ["Subtotal", totals.subtotal],
   ];
-  const costBoxHeight = 18 + costRows.length * 7.2 + 6;
+  const remainingSpace = PAGE.footerTop - 6 - y;
+  const compactCommercial = remainingSpace < 56;
+  const tableHeaderHeight = compactCommercial ? 8 : 10;
+  const rowHeight = compactCommercial ? 7.1 : 8.4;
+  const totalBoxHeight = compactCommercial ? 19 : 22;
+  const costBoxHeight = 6 + tableHeaderHeight + costRows.length * rowHeight - 1;
 
   doc.setFillColor(...COLORS.panel);
   doc.setDrawColor(...COLORS.line);
   doc.setLineWidth(0.25);
   doc.roundedRect(20, y, 170, costBoxHeight, 4, 4, "FD");
   doc.setFillColor(...COLORS.accentSoft);
-  doc.roundedRect(24, y + 5, 162, 10, 2, 2, "F");
+  doc.roundedRect(24, y + 3, 162, tableHeaderHeight, 2, 2, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
+  doc.setFontSize(compactCommercial ? 7.1 : 7.8);
   doc.setTextColor(...COLORS.accent);
-  doc.text("DESCRIPTION", 29, y + 11.5);
-  doc.text("AMOUNT", 181, y + 11.5, { align: "right" });
+  doc.text("DESCRIPTION", 29, y + 3 + tableHeaderHeight / 2 + 1.4);
+  doc.text("AMOUNT", 181, y + 3 + tableHeaderHeight / 2 + 1.4, { align: "right" });
 
-  let rowY = y + 23;
+  let rowY = y + 5.8 + tableHeaderHeight;
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.2);
+  doc.setFontSize(compactCommercial ? 7.7 : 8.7);
   doc.setTextColor(...COLORS.ink);
 
   costRows.forEach(([label, value], index) => {
-    if (index % 2 === 0) {
-      doc.setFillColor(...COLORS.white);
-      doc.roundedRect(25, rowY - 5.4, 160, 8.5, 1.5, 1.5, "F");
-    }
+    doc.setFillColor(...(index % 2 === 0 ? COLORS.white : COLORS.zebra));
+    doc.roundedRect(24, rowY - rowHeight + 1.6, 162, rowHeight - 0.5, 1.5, 1.5, "F");
 
     doc.text(label, 29, rowY);
     doc.setFont("helvetica", "bold");
     doc.text(formatMoney(value), 181, rowY, { align: "right" });
     doc.setFont("helvetica", "normal");
-    rowY += 7.2;
+    rowY += rowHeight;
   });
 
-  y += costBoxHeight + 8;
+  y += costBoxHeight + 3;
+
+  const maxTotalY = PAGE.footerTop - totalBoxHeight - 1.5;
+  y = Math.min(y, maxTotalY);
 
   doc.setFillColor(...COLORS.accentDark);
-  doc.roundedRect(20, y, 170, 24, 4, 4, "F");
+  doc.roundedRect(20, y, 170, totalBoxHeight, 4, 4, "F");
   doc.setFillColor(...COLORS.gold);
   doc.rect(20, y, 170, 2, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.5);
+  doc.setFontSize(compactCommercial ? 7.4 : 8.2);
   doc.setTextColor(...COLORS.goldSoft);
-  doc.text("TOTAL ESTIMATED BALANCE", 26, y + 9);
+  doc.text("TOTAL ESTIMATED BALANCE", 26, y + (compactCommercial ? 7.5 : 8.5));
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
+  doc.setFontSize(compactCommercial ? 6.5 : 7.1);
   doc.setTextColor(...COLORS.accentSoft);
   doc.text(
     `Estimated in USD - Estimated flight time ${formatHHMM(totalFlightTimeMinutes) || formatHours(totalFlightTime)}`,
     26,
-    y + 16,
+    y + (compactCommercial ? 13 : 15),
   );
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(21);
+  doc.setFontSize(compactCommercial ? 17.5 : 19.5);
   doc.setTextColor(...COLORS.white);
-  doc.text(`${formatMoney(totals.total)} USD`, 185, y + 16.5, { align: "right" });
+  doc.text(`${formatMoney(totals.total)} USD`, 185, y + (compactCommercial ? 14.5 : 15.5), {
+    align: "right",
+  });
 
   doc.addPage();
   const termsState = { y: 38 };
