@@ -77,7 +77,7 @@ const homePath = computed(() => getLocalizedPath(locale.value, "home"));
   position: relative;
   background:
     linear-gradient(rgba(8, 15, 30, 0.75), rgba(8, 15, 30, 0.85)),
-    url("/images/reserva/DSC03873.jpg") center / cover no-repeat;
+    url("/images/reserva/2.jpg") center / cover no-repeat;
 }
 
 .thankyou-card {

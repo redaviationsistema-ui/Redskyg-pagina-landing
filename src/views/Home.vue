@@ -22,7 +22,7 @@ const content = {
     ],
     primaryCta: "Request a Flight",
     secondaryCta: "Talk to an Advisor",
-    poster: "images/Home/home2.jpg",
+    poster: "images/jet-interior-2.webp",
     video: "images/Home/home2.mp4",
     metrics: [
       { value: "24/7", label: "flight coordination" },
@@ -78,8 +78,21 @@ const content = {
     title: "Real flight moments, handled with executive precision.",
     description:
       "Executive departures, ground support and private cabin environments.",
-    image: "images/Home/home3.jpg",
+    videoUrl: "https://www.instagram.com/reel/DbkATAEBv7Z/embed/?autoplay=1&muted=1",
+    videoTitle: "Red Sky Group private flight experience on Instagram",
+    image: "images/jet-interior-2.webp",
     alt: "Private cabin experience",
+  },
+  catering: {
+    eyebrow: "Onboard Catering",
+    title: "An experience considered down to the last detail.",
+    description:
+      "A curated culinary selection designed to complement your flight with freshness, presentation and executive service.",
+    imageAlt: "Private flight catering service",
+    previousLabel: "View previous catering image",
+    nextLabel: "View next catering image",
+    paginationLabel: "Catering carousel navigation",
+    slideLabel: "Go to catering image",
   },
   flow: {
     eyebrow: "How It Works",

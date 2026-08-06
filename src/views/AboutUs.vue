@@ -3,7 +3,7 @@
 
     <!-- HERO ABOUT -->
     <section class="about-hero">
-      <img class="about-hero-bg" src="../../public/images/about/about1.jpeg" alt="Private Jet" />
+      <img class="about-hero-bg" src="../../public/images/Home/home18.jpg" alt="Private Jet" />
       <div class="about-hero-overlay"></div>
 
       <div class="about-hero-content">
@@ -18,7 +18,7 @@
 
         <!-- LEFT -->
         <div class="discover-left">
-          <img class="discover-img" src="../../public/images/Home/home2.jpg" alt="Private Jet Interior" />
+          <img class="discover-img" src="../../public/images/jet-interior-2.webp" alt="Private Jet Interior" />
 
           <div class="reserve-box">
             <h5>INTRODUCING SKYLUX RESERVE</h5>
@@ -77,7 +77,7 @@
         <div class="world-right">
 
           <div class="world-item">
-            <img src="../../public/images/Home/home3.jpg" alt="Luxury Private Jet Interior" />
+            <img src="../../public/images/jet-interior-2.webp" alt="Luxury Private Jet Interior" />
             <div class="world-text">
               <h4>Mercury Jets Difference</h4>
               <p>
@@ -88,7 +88,7 @@
           </div>
 
           <div class="world-item">
-            <img src="../../public/images/Home/home4.jpg" alt="Luxury Private Jet Interior" />
+            <img src="../../public/images/Pricing/Pricing1.jpg" alt="Luxury private aircraft" />
             <div class="world-text">
               <h4>Safety and Reliability</h4>
               <p>
@@ -99,7 +99,7 @@
           </div>
 
           <div class="world-item">
-            <img src="../../public/images/Home/home5.jpg" alt="Luxury Private Jet Interior" />
+            <img src="../../public/images/Pricing/Pricing2.jpg" alt="Private aircraft service" />
             <div class="world-text">
               <h4>The Essence of Private Charter</h4>
               <p>
@@ -158,7 +158,7 @@
 
       <div class="testimonial-card">
         <div class="testimonial-user">
-          <img src="../../public/images/Home/home22.png" alt="User" />
+          <img src="../../public/images/logo.png" alt="Red Sky Group" />
           <div>
             <h4>The level of comfort and convenience is unparalleled</h4>
           </div>
@@ -173,7 +173,7 @@
 
       <div class="testimonial-card">
         <div class="testimonial-user">
-          <img src="../../public/images/Home/home23.png" alt="User" />
+          <img src="../../public/images/logo.png" alt="Red Sky Group" />
           <div>
             <h4>The level of comfort and convenience is unparalleled</h4>
           </div>

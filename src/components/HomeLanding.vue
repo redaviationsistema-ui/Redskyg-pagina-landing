@@ -104,6 +104,7 @@
           <div class="fleet-head reveal">
             <div class="fleet-copy">
               <span class="eyebrow">{{ content.fleet.eyebrow }}</span>
+              <span class="fleet-emblem" aria-hidden="true"><Plane /></span>
               <h2>{{ content.fleet.title }}</h2>
               <p>{{ content.fleet.description }}</p>
 
@@ -183,34 +184,55 @@
         </div>
       </section>
 
-      <section class="section flow">
-        <div class="shell">
-          <div class="section-copy section-copy--center reveal">
+      <section class="section flow" aria-labelledby="flow-title">
+        <img
+          class="flow-aircraft"
+          :src="assetUrl('images/Home/home18.jpg')"
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+        <div class="shell flow-shell">
+          <header class="section-copy section-copy--center flow-heading reveal">
             <span class="eyebrow">{{ content.flow.eyebrow }}</span>
-            <h2>{{ content.flow.title }}</h2>
+            <span class="flow-emblem" aria-hidden="true"><Plane /></span>
+            <h2 id="flow-title">{{ content.flow.title }}</h2>
             <p>{{ content.flow.description }}</p>
-          </div>
+          </header>
 
-          <div class="flow-steps">
+          <div class="flow-steps" role="list">
             <article
               v-for="(item, index) in content.flow.steps"
               :key="item.title"
               class="flow-step reveal"
+              :style="{ '--step-delay': `${index * 110}ms` }"
+              role="listitem"
             >
               <span class="step-number">0{{ index + 1 }}</span>
-              <div>
+              <div class="step-icon" aria-hidden="true">
+                <span class="step-icon-orbit"></span>
+                <FilePenLine v-if="index === 0" />
+                <MailOpen v-else-if="index === 1" />
+                <PlaneTakeoff v-else />
+              </div>
+              <div class="step-copy">
                 <h3>{{ item.title }}</h3>
+                <span class="step-rule" aria-hidden="true"></span>
                 <p>{{ item.description }}</p>
               </div>
             </article>
+            <div class="flow-connector" aria-hidden="true">
+              <span></span><span></span>
+            </div>
           </div>
         </div>
       </section>
 
       <section class="section narrative">
         <div class="shell narrative-grid">
-          <div class="section-copy reveal">
+          <div class="section-copy premium-heading reveal">
             <span class="eyebrow">{{ content.why.eyebrow }}</span>
+            <span class="section-emblem" aria-hidden="true"><Plane /></span>
             <h2>{{ content.why.title }}</h2>
           </div>
 
@@ -230,9 +252,23 @@
         </div>
       </section>
 
-      <section class="section experience">
+      <section
+        class="section experience"
+        :class="{ 'experience--video': content.experience.videoUrl }"
+      >
         <div class="experience-media reveal">
+          <iframe
+            v-if="content.experience.videoUrl"
+            :src="content.experience.videoUrl"
+            :title="content.experience.videoTitle || content.experience.title"
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowfullscreen
+            scrolling="no"
+            referrerpolicy="strict-origin-when-cross-origin"
+          ></iframe>
           <img
+            v-else
             :src="assetUrl(content.experience.image)"
             :alt="content.experience.alt"
             loading="lazy"
@@ -240,10 +276,79 @@
           />
         </div>
 
-        <div class="shell experience-copy reveal">
+        <div class="shell experience-copy premium-heading premium-heading--dark reveal">
           <span class="eyebrow eyebrow--light">{{ content.experience.eyebrow }}</span>
+          <span class="section-emblem" aria-hidden="true"><Plane /></span>
           <h2>{{ content.experience.title }}</h2>
           <p>{{ content.experience.description }}</p>
+        </div>
+      </section>
+
+      <section class="section catering" aria-labelledby="catering-title">
+        <div class="shell catering-shell">
+          <header class="premium-heading catering-heading reveal">
+            <span class="eyebrow">{{ content.catering.eyebrow }}</span>
+            <span class="section-emblem" aria-hidden="true"><Plane /></span>
+            <h2 id="catering-title">{{ content.catering.title }}</h2>
+            <p>{{ content.catering.description }}</p>
+          </header>
+
+          <div
+            class="catering-carousel reveal"
+            @mouseenter="stopCateringAutoplay"
+            @mouseleave="startCateringAutoplay"
+            @focusin="stopCateringAutoplay"
+            @focusout="startCateringAutoplay"
+          >
+            <button
+              class="catering-arrow catering-arrow--previous"
+              type="button"
+              :aria-label="content.catering.previousLabel"
+              @click="moveCatering(-1)"
+            >
+              <ChevronLeft aria-hidden="true" />
+            </button>
+
+            <div
+              ref="cateringTrack"
+              class="catering-track"
+              @scroll.passive="syncCateringIndex"
+            >
+              <figure
+                v-for="(image, index) in cateringImages"
+                :key="image"
+                class="catering-slide"
+              >
+                <img
+                  :src="assetUrl(image)"
+                  :alt="`${content.catering.imageAlt} ${index + 1}`"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
+            </div>
+
+            <button
+              class="catering-arrow catering-arrow--next"
+              type="button"
+              :aria-label="content.catering.nextLabel"
+              @click="moveCatering(1)"
+            >
+              <ChevronRight aria-hidden="true" />
+            </button>
+          </div>
+
+          <div class="catering-dots" :aria-label="content.catering.paginationLabel">
+            <button
+              v-for="(_, index) in cateringImages"
+              :key="`catering-dot-${index}`"
+              type="button"
+              :class="{ active: activeCateringIndex === index }"
+              :aria-label="`${content.catering.slideLabel} ${index + 1}`"
+              :aria-current="activeCateringIndex === index ? 'true' : undefined"
+              @click="scrollToCatering(index)"
+            ></button>
+          </div>
         </div>
       </section>
 
@@ -258,8 +363,9 @@
             />
           </div>
 
-          <div class="section-copy reveal">
+          <div class="section-copy premium-heading reveal">
             <span class="eyebrow">{{ content.trust.eyebrow }}</span>
+            <span class="section-emblem" aria-hidden="true"><Plane /></span>
             <h2>{{ content.trust.title }}</h2>
             <p>{{ content.trust.description }}</p>
 
@@ -277,8 +383,9 @@
 
       <section class="final-cta">
         <div class="shell final-grid reveal">
-          <div>
+          <div class="premium-heading premium-heading--dark">
             <span class="eyebrow eyebrow--light">{{ content.cta.eyebrow }}</span>
+            <span class="section-emblem" aria-hidden="true"><Plane /></span>
             <h2>{{ content.cta.title }}</h2>
             <p>{{ content.cta.description }}</p>
           </div>
@@ -305,13 +412,17 @@ import {
   ArrowRight,
   CalendarCheck,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
+  FilePenLine,
   Gauge,
   Globe2,
   Handshake,
   Helicopter,
   MapPin,
   MessageCircle,
+  MailOpen,
   Plane,
   PlaneTakeoff,
   Route,
@@ -337,6 +448,16 @@ const enableHeroVideo = ref(false);
 const scrollProgress = ref(0);
 const heroParallax = ref(0);
 const activeFleetFilter = ref("all");
+const cateringTrack = ref(null);
+const activeCateringIndex = ref(0);
+const cateringImages = [
+  ...Array.from(
+    { length: 6 },
+    (_, index) => `images/Home/CATERIING/${index + 1}.png`,
+  ),
+  "images/Home/CATERIING/7.jpg",
+];
+let cateringAutoplay;
 
 const iconMap = {
   clock: Clock3,
@@ -414,6 +535,42 @@ const goToReservation = () => {
   router.push(localizedPath("reserva"));
 };
 
+const scrollToCatering = (index, behavior = "smooth") => {
+  const track = cateringTrack.value;
+  const slides = track?.children;
+  if (!track || !slides?.length) return;
+
+  const normalizedIndex = (index + slides.length) % slides.length;
+  track.scrollTo({ left: slides[normalizedIndex].offsetLeft, behavior });
+  activeCateringIndex.value = normalizedIndex;
+};
+
+const moveCatering = (direction) => {
+  scrollToCatering(activeCateringIndex.value + direction);
+};
+
+const syncCateringIndex = () => {
+  const track = cateringTrack.value;
+  const slides = Array.from(track?.children || []);
+  if (!track || !slides.length) return;
+
+  activeCateringIndex.value = slides.reduce((closest, slide, index) =>
+    Math.abs(slide.offsetLeft - track.scrollLeft) <
+    Math.abs(slides[closest].offsetLeft - track.scrollLeft)
+      ? index
+      : closest, 0);
+};
+
+const stopCateringAutoplay = () => {
+  window.clearInterval(cateringAutoplay);
+};
+
+const startCateringAutoplay = () => {
+  stopCateringAutoplay();
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  cateringAutoplay = window.setInterval(() => moveCatering(1), 4500);
+};
+
 let observer;
 
 const handleScrollMotion = () => {
@@ -451,6 +608,7 @@ onMounted(() => {
   window.addEventListener("scroll", handleScrollMotion, { passive: true });
 
   const elements = document.querySelectorAll(".home-page .reveal");
+  startCateringAutoplay();
 
   if (!("IntersectionObserver" in window)) {
     elements.forEach((element) => element.classList.add("is-visible"));
@@ -477,6 +635,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   observer?.disconnect();
+  stopCateringAutoplay();
   window.removeEventListener("scroll", handleScrollMotion);
 });
 </script>
@@ -827,6 +986,183 @@ onBeforeUnmount(() => {
   max-width: 650px;
 }
 
+.premium-heading .eyebrow {
+  color: #005a9c;
+  letter-spacing: 0.18em;
+}
+
+.section-emblem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 112px;
+  margin: 14px 0 24px;
+  color: #c79a3b;
+}
+
+.section-emblem::before,
+.section-emblem::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+}
+
+.section-emblem svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  transform: rotate(-12deg);
+}
+
+.premium-heading h2 {
+  margin-top: 0;
+  color: #071a33;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+}
+
+.premium-heading--dark .eyebrow,
+.premium-heading--dark .section-emblem {
+  color: #d0ac67;
+}
+
+.premium-heading--dark h2 {
+  color: #ffffff;
+}
+
+.catering {
+  position: relative;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(0, 90, 156, 0.08), transparent 28%),
+    linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);
+  overflow: hidden;
+}
+
+.catering-heading {
+  max-width: 900px;
+  margin: 0 auto 58px;
+  text-align: center;
+}
+
+.catering-heading .section-emblem {
+  margin-inline: auto;
+}
+
+.catering-heading h2 {
+  margin: 0 auto 22px;
+  font-size: clamp(4rem, 5vw, 4.875rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.catering-heading p {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.catering-carousel {
+  position: relative;
+}
+
+.catering-track {
+  display: grid;
+  grid-auto-columns: calc((100% - 48px) / 3);
+  grid-auto-flow: column;
+  gap: 24px;
+  padding: 14px 4px 34px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.catering-track::-webkit-scrollbar {
+  display: none;
+}
+
+.catering-slide {
+  position: relative;
+  margin: 0;
+  border: 1px solid rgba(7, 26, 51, 0.08);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(7, 26, 51, 0.12);
+  scroll-snap-align: start;
+  overflow: hidden;
+}
+
+.catering-slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.catering-slide img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4.35;
+  object-fit: cover;
+  transition: transform 450ms ease;
+}
+
+.catering-arrow {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(199, 154, 59, 0.7);
+  border-radius: 50%;
+  background: #071a33;
+  color: #c79a3b;
+  box-shadow: 0 12px 30px rgba(7, 26, 51, 0.2);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: transform 250ms ease, background 250ms ease;
+}
+
+.catering-arrow svg {
+  width: 22px;
+  height: 22px;
+}
+
+.catering-arrow--previous { left: -24px; }
+.catering-arrow--next { right: -24px; }
+
+.catering-dots {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 8px;
+}
+
+.catering-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(7, 26, 51, 0.22);
+  cursor: pointer;
+  transition: width 250ms ease, background 250ms ease;
+}
+
+.catering-dots button.active {
+  width: 28px;
+  background: #c79a3b;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .catering-slide:hover img { transform: scale(1.025); }
+  .catering-arrow:hover { transform: translateY(-50%) scale(1.07); background: #005a9c; }
+}
+
 .feature-list {
   border-top: 1px solid var(--line);
 }
@@ -890,6 +1226,41 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
+.experience--video {
+  min-height: 780px;
+  align-items: center;
+  background:
+    radial-gradient(circle at 78% 45%, rgba(23, 90, 143, 0.34), transparent 28%),
+    linear-gradient(135deg, #071624 0%, #0b2137 100%);
+}
+
+.experience--video .experience-media {
+  inset: 54px max(5vw, calc((100vw - 1200px) / 2)) 54px auto;
+  width: min(430px, 38vw);
+  border: 1px solid rgba(199, 154, 59, 0.34);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.38);
+  overflow: hidden;
+}
+
+.experience--video .experience-media::after {
+  display: none;
+}
+
+.experience--video .experience-media iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+.experience--video .experience-copy {
+  width: min(1200px, calc(100% - 40px));
+  padding-right: min(48%, 560px);
+}
+
 .experience-copy {
   position: relative;
   z-index: 1;
@@ -907,7 +1278,37 @@ onBeforeUnmount(() => {
 }
 
 .flow {
-  background: #ffffff;
+  position: relative;
+  padding: clamp(96px, 9vw, 142px) 0;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.flow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, #ffffff 0%, rgba(255, 255, 255, 0.96) 45%, rgba(255, 255, 255, 0.38) 100%);
+  pointer-events: none;
+}
+
+.flow-aircraft {
+  position: absolute;
+  z-index: -2;
+  top: 0;
+  right: 0;
+  width: min(58vw, 980px);
+  height: 100%;
+  object-fit: cover;
+  object-position: 56% center;
+  opacity: 0.13;
+  pointer-events: none;
+}
+
+.flow-shell {
+  width: min(1500px, calc(100% - 64px));
 }
 
 .section-copy--center {
@@ -916,36 +1317,189 @@ onBeforeUnmount(() => {
   margin: 0 auto;
 }
 
+.flow-heading {
+  max-width: 1050px;
+}
+
+.flow-heading .eyebrow {
+  color: #005a9c;
+  letter-spacing: 0.18em;
+}
+
+.flow-emblem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 112px;
+  margin: 14px auto 24px;
+  color: #c79a3b;
+}
+
+.flow-emblem::before,
+.flow-emblem::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #c79a3b;
+}
+
+.flow-emblem svg {
+  width: 17px;
+  height: 17px;
+  transform: rotate(-12deg);
+}
+
+.flow-heading h2 {
+  max-width: 1000px;
+  margin: 0 auto 24px;
+  color: #071a33;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(4rem, 5vw, 4.875rem);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.flow-heading p {
+  max-width: 720px;
+  color: #536176;
+}
+
 .section-copy--center p {
   margin: 0 auto;
 }
 
 .flow-steps {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  margin-top: 54px;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  gap: clamp(24px, 2.5vw, 40px);
+  margin-top: 70px;
+  padding-bottom: 30px;
 }
 
 .flow-step {
-  min-height: 260px;
-  padding: 34px 30px;
-  border-right: 1px solid var(--line);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 390px;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 34px 40px;
+  border: 1px solid rgba(7, 26, 51, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 45px rgba(7, 26, 51, 0.1);
+  text-align: center;
+  overflow: hidden;
+  transition: transform 300ms ease, box-shadow 300ms ease;
+  transition-delay: var(--step-delay, 0ms);
 }
 
-.flow-step:first-child {
-  border-left: 1px solid var(--line);
+.flow-step::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 106px;
+  height: 92px;
+  background: #071a33;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
 .step-number {
-  display: block;
-  margin-bottom: 68px;
-  color: var(--blue);
-  font-size: 0.82rem;
+  position: absolute;
+  z-index: 1;
+  top: 19px;
+  left: 18px;
+  color: #c79a3b;
+  font-size: 0.86rem;
   font-weight: 900;
   letter-spacing: 0.16em;
+}
+
+.step-icon {
+  position: relative;
+  display: grid;
+  width: 96px;
+  height: 96px;
+  place-items: center;
+  margin: 13px 0 32px;
+  border-radius: 50%;
+  background: #071a33;
+  color: #c79a3b;
+}
+
+.step-icon svg {
+  width: 37px;
+  height: 37px;
+  stroke-width: 1.5;
+  transition: transform 300ms ease;
+}
+
+.step-icon-orbit {
+  position: absolute;
+  inset: -9px;
+  border: 1px solid transparent;
+  border-top-color: #c79a3b;
+  border-right-color: #c79a3b;
+  border-radius: 50%;
+  transform: rotate(24deg);
+}
+
+.step-copy h3 {
+  color: #071a33;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.45rem, 1.65vw, 1.8rem);
+  font-weight: 500;
+}
+
+.step-rule {
+  display: block;
+  width: 42px;
+  height: 2px;
+  margin: 17px auto 18px;
+  background: #c79a3b;
+}
+
+.step-copy p {
+  max-width: 320px;
+  color: #536176;
+}
+
+.flow-connector {
+  position: absolute;
+  right: 15%;
+  bottom: 15px;
+  left: 15%;
+  height: 1px;
+  background: rgba(199, 154, 59, 0.7);
+}
+
+.flow-connector span {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #c79a3b;
+  box-shadow: 0 0 0 1px #c79a3b;
+  transform: translate(-50%, -50%);
+}
+
+.flow-connector span:first-child { left: 33.333%; }
+.flow-connector span:last-child { left: 66.666%; }
+
+@media (hover: hover) and (pointer: fine) {
+  .flow-step:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 22px 55px rgba(7, 26, 51, 0.15);
+  }
+
+  .flow-step:hover .step-icon svg { transform: translateY(-3px) rotate(-2deg); }
 }
 
 .fleet-preview {
@@ -1102,34 +1656,73 @@ onBeforeUnmount(() => {
 .fleet-head {
   position: static;
   display: grid;
-  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   align-items: start;
-  gap: clamp(28px, 5vw, 72px);
+  justify-items: center;
+  gap: 32px;
   padding-top: 0;
+  text-align: center;
+}
+
+.fleet-copy {
+  width: min(100%, 1050px);
+}
+
+.fleet-copy .eyebrow {
+  color: #005a9c;
+  letter-spacing: 0.18em;
+}
+
+.fleet-emblem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 112px;
+  margin: 14px auto 24px;
+  color: #c79a3b;
+}
+
+.fleet-emblem::before,
+.fleet-emblem::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #c79a3b;
+}
+
+.fleet-emblem svg {
+  width: 17px;
+  height: 17px;
+  transform: rotate(-12deg);
 }
 
 .fleet-copy h2 {
-  max-width: 620px;
-  margin: 0.55rem 0 0.85rem;
-  font-size: clamp(2.25rem, 4.2vw, 4.45rem);
-  line-height: 0.96;
-  letter-spacing: -0.04em;
+  max-width: 1000px;
+  margin: 0 auto 24px;
+  color: #071a33;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(4rem, 5vw, 4.875rem);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
 }
 
 .fleet-copy p {
-  max-width: 470px;
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.98rem;
-  line-height: 1.7;
+  max-width: 720px;
+  margin: 0 auto;
+  color: #536176;
+  font-size: 1rem;
+  line-height: 1.8;
 }
 
 .fleet-filters {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
-  padding-top: 16px;
+  width: 100%;
+  padding-top: 0;
 }
 
 .fleet-filter {
@@ -1474,6 +2067,24 @@ onBeforeUnmount(() => {
   transform: translateY(0);
 }
 
+.flow-step.reveal {
+  transition:
+    opacity 0.55s ease var(--step-delay, 0ms),
+    transform 0.55s ease var(--step-delay, 0ms),
+    box-shadow 0.3s ease;
+}
+
+.flow-step.reveal.is-visible:hover {
+  transition-delay: 0ms;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .flow-step.reveal.is-visible:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 22px 55px rgba(7, 26, 51, 0.15);
+  }
+}
+
 @keyframes aircraftFly {
   0% {
     transform: translate3d(calc(100vw + 220px), 42px, 0) rotate(-8deg) scale(0.88);
@@ -1565,21 +2176,9 @@ onBeforeUnmount(() => {
     gap: 38px;
   }
 
-  .flow-steps {
-    grid-template-columns: 1fr;
-  }
-
-  .flow-step,
-  .flow-step:first-child {
-    min-height: auto;
-    border-left: 1px solid var(--line);
-    border-right: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-  }
-
-  .step-number {
-    margin-bottom: 34px;
-  }
+  .flow-shell { width: min(100% - 40px, 1200px); }
+  .flow-heading h2 { font-size: clamp(3rem, 5.5vw, 3.625rem); }
+  .flow-step { min-height: 370px; padding-inline: 24px; }
 
   .final-actions {
     justify-content: flex-start;
@@ -1590,13 +2189,17 @@ onBeforeUnmount(() => {
   }
 
   .fleet-filters {
-    justify-content: flex-start;
+    justify-content: center;
     padding-top: 0;
   }
+
+  .fleet-copy h2 { font-size: clamp(3rem, 5.5vw, 3.625rem); }
 
   .fleet-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .catering-track { grid-auto-columns: calc((100% - 24px) / 2); }
 }
 
 @media (max-width: 768px) {
@@ -1606,6 +2209,98 @@ onBeforeUnmount(() => {
 
   .section {
     padding: 74px 0;
+  }
+
+  .catering-heading {
+    margin-bottom: 38px;
+  }
+
+  .catering-heading h2 {
+    font-size: clamp(2.25rem, 10.5vw, 2.625rem);
+    line-height: 1.02;
+  }
+
+  .catering-track {
+    grid-auto-columns: 86%;
+    gap: 16px;
+    margin-inline: -16px;
+    padding-inline: 16px;
+    scroll-padding-inline: 16px;
+  }
+
+  .catering-arrow {
+    width: 42px;
+    height: 42px;
+  }
+
+  .catering-arrow--previous { left: -8px; }
+  .catering-arrow--next { right: -8px; }
+
+  .premium-heading {
+    width: 100%;
+    text-align: center;
+  }
+
+  .premium-heading .eyebrow {
+    display: block;
+    line-height: 1.45;
+  }
+
+  .premium-heading .section-emblem {
+    margin: 14px auto 22px;
+  }
+
+  .premium-heading h2,
+  .section-copy.premium-heading h2,
+  .experience-copy.premium-heading h2,
+  .final-cta .premium-heading h2 {
+    max-width: 100%;
+    margin: 0 auto 18px;
+    font-size: clamp(2.25rem, 10.5vw, 2.625rem);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
+  }
+
+  .premium-heading > p,
+  .experience-copy.premium-heading > p {
+    max-width: 36rem;
+    margin-inline: auto;
+  }
+
+  .narrative-grid,
+  .trust-grid,
+  .final-grid {
+    gap: 34px;
+  }
+
+  .flow { padding: 78px 0; }
+  .flow::after { background: rgba(250, 251, 252, 0.94); }
+  .flow-aircraft { display: none; }
+  .flow-shell { width: min(100% - 40px, 1200px); }
+  .flow-heading h2 { font-size: clamp(2.25rem, 10.5vw, 2.625rem); line-height: 1.02; }
+  .flow-steps { grid-template-columns: 1fr; gap: 24px; margin-top: 48px; padding-bottom: 0; }
+  .flow-step { min-height: 350px; padding: 42px 28px 34px; }
+  .flow-connector { display: none; }
+
+  .experience--video {
+    display: flex;
+    min-height: auto;
+    flex-direction: column-reverse;
+    padding: 74px 20px;
+  }
+
+  .experience--video .experience-copy {
+    width: 100%;
+    padding: 0 0 38px;
+  }
+
+  .experience--video .experience-media {
+    position: relative;
+    inset: auto;
+    width: min(100%, 430px);
+    height: min(680px, 155vw);
+    flex: 0 0 auto;
   }
 
   .hero {
@@ -1693,11 +2388,22 @@ onBeforeUnmount(() => {
   }
 
   .fleet-filters {
+    justify-content: flex-start;
     overflow-x: auto;
     flex-wrap: nowrap;
     margin-inline: -16px;
     padding: 0 16px 8px;
     scrollbar-width: none;
+  }
+
+  .fleet-copy h2 {
+    font-size: clamp(2.25rem, 10.5vw, 2.625rem);
+    line-height: 1.02;
+  }
+
+  .fleet-emblem,
+  .flow-emblem {
+    margin-inline: auto;
   }
 
   .fleet-filters::-webkit-scrollbar {
@@ -1745,6 +2451,14 @@ onBeforeUnmount(() => {
 
   .trust-mark {
     min-height: 260px;
+  }
+
+  .trust-lines {
+    text-align: left;
+  }
+
+  .final-grid {
+    text-align: center;
   }
 }
 

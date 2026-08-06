@@ -22,7 +22,7 @@ const content = {
     ],
     primaryCta: "Cotizar vuelo ahora",
     secondaryCta: "Recibir cotizacion en minutos",
-    poster: "images/Home/home2.jpg",
+    poster: "images/jet-interior-2.webp",
     video: "images/Home/home2.mp4",
     metrics: [
       { value: "24/7", label: "coordinacion de vuelo" },
@@ -82,29 +82,42 @@ const content = {
     eyebrow: "Prueba Social",
     title: "Experiencia real con precision y calidad ejecutiva.",
     description: "Salidas ejecutivas, atencion en tierra y cabinas privadas.",
-    image: "images/Home/home3.jpg",
+    videoUrl: "https://www.instagram.com/reel/DbkATAEBv7Z/embed/?autoplay=1&muted=1",
+    videoTitle: "Experiencia de vuelo privado de Red Sky Group en Instagram",
+    image: "images/jet-interior-2.webp",
     alt: "Cabina privada",
   },
+  catering: {
+    eyebrow: "Catering a bordo",
+    title: "Una experiencia cuidada hasta el último detalle.",
+    description:
+      "Selección gastronómica preparada para acompañar tu vuelo con presentación, frescura y servicio ejecutivo.",
+    imageAlt: "Servicio de catering para vuelo privado",
+    previousLabel: "Ver imagen anterior de catering",
+    nextLabel: "Ver siguiente imagen de catering",
+    paginationLabel: "Navegación del carrusel de catering",
+    slideLabel: "Ir a la imagen de catering",
+  },
   flow: {
-    eyebrow: "Como Funciona",
+    eyebrow: "Cómo funciona",
     title: "Solicita tu vuelo privado en tres pasos.",
     description:
-      "Opciones claras, comunicacion directa y disciplina operativa desde la primera solicitud hasta el despegue.",
+      "Opciones claras, comunicación directa y disciplina operativa desde la primera solicitud hasta el despegue.",
     steps: [
       {
-        title: "Solicitas cotizacion",
+        title: "Solicitas cotización",
         description:
           "Comparte ruta, fecha y pasajeros para activar tu solicitud.",
       },
       {
         title: "Recibes opciones",
         description:
-          "Recibe opciones de aeronave y horario segun tu mision.",
+          "Te enviamos las mejores opciones de aeronaves y horarios.",
       },
       {
         title: "Confirmas y vuelas",
         description:
-          "Confirma la mejor opcion y despega con coordinacion directa.",
+          "Confirma la mejor opción y despega con coordinación directa.",
       },
     ],
   },

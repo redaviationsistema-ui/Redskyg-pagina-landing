@@ -5,6 +5,9 @@
         <div class="lookbooks-hero">
           <div>
             <span class="lookbooks-eyebrow">{{ copy.eyebrow }}</span>
+            <span v-if="embedded" class="lookbooks-emblem" aria-hidden="true">
+              <Plane />
+            </span>
             <h1>{{ copy.title }}</h1>
             <p>{{ copy.subtitle }}</p>
           </div>
@@ -97,6 +100,7 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import { Plane } from "lucide-vue-next";
 import MainLayout from "@/layouts/MainLayout.vue";
 import LookbookCard from "@/components/lookbooks/LookbookCard.vue";
 import LookbookAccessModal from "@/components/lookbooks/LookbookAccessModal.vue";
@@ -439,6 +443,43 @@ onMounted(async () => {
   text-transform: uppercase;
 }
 
+.lookbooks-page--embedded .lookbooks-eyebrow {
+  color: #005a9c;
+  letter-spacing: 0.18em;
+}
+
+.lookbooks-emblem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 112px;
+  margin: 14px 0 24px;
+  color: #c79a3b;
+}
+
+.lookbooks-emblem::before,
+.lookbooks-emblem::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+}
+
+.lookbooks-emblem svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  transform: rotate(-12deg);
+}
+
+.lookbooks-page--embedded .lookbooks-hero h1 {
+  color: #071a33;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
 .lookbooks-hero h1 {
   margin: 0.8rem 0 1rem;
   color: var(--lookbook-ink);
@@ -648,8 +689,33 @@ onMounted(async () => {
   }
 
   .lookbooks-hero {
-    align-items: start;
+    align-items: center;
     flex-direction: column;
+    text-align: center;
+  }
+
+  .lookbooks-hero > div {
+    width: 100%;
+  }
+
+  .lookbooks-emblem {
+    margin: 14px auto 22px;
+  }
+
+  .lookbooks-page--embedded .lookbooks-hero h1 {
+    margin: 0 auto 18px;
+    font-size: clamp(2.25rem, 10.5vw, 2.625rem);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    overflow-wrap: anywhere;
+  }
+
+  .lookbooks-hero p {
+    margin-inline: auto;
+  }
+
+  .lookbooks-page--embedded .lookbooks-link {
+    width: 100%;
   }
 
   .lookbooks-grid {
