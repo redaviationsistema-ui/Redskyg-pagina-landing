@@ -78,8 +78,7 @@ const content = {
     title: "Real flight moments, handled with executive precision.",
     description:
       "Executive departures, ground support and private cabin environments.",
-    videoUrl: "https://www.instagram.com/reel/DbkATAEBv7Z/embed/?autoplay=1&muted=1",
-    videoTitle: "Red Sky Group private flight experience on Instagram",
+    video: "images/Home/CATERIING/giv.mp4",
     image: "images/jet-interior-2.webp",
     alt: "Private cabin experience",
   },
@@ -124,6 +123,31 @@ const content = {
     cta: "Our Fleet",
     allLabel: "All",
     modelCta: "View models",
+    backgroundImage: "images/Home/FONDO/home1.png",
+    decorImage: "images/Home/FONDO/supermijet.png",
+    benefitsLabel: "Fleet advantages",
+    benefits: [
+      {
+        icon: "coverage",
+        title: "Global Coverage",
+        description: "Access to thousands of airports worldwide.",
+      },
+      {
+        icon: "operations",
+        title: "24/7 Operations",
+        description: "We are available anytime, anywhere.",
+      },
+      {
+        icon: "secure",
+        title: "Discreet & Secure",
+        description: "Your privacy and safety are our priority.",
+      },
+      {
+        icon: "tailored",
+        title: "Tailored Solutions",
+        description: "We adapt to your needs with precision.",
+      },
+    ],
     assurance: {
       title: "Safety, experience and technology on every flight.",
       description:

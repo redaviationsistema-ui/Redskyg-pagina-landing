@@ -82,8 +82,7 @@ const content = {
     eyebrow: "Prueba Social",
     title: "Experiencia real con precision y calidad ejecutiva.",
     description: "Salidas ejecutivas, atencion en tierra y cabinas privadas.",
-    videoUrl: "https://www.instagram.com/reel/DbkATAEBv7Z/embed/?autoplay=1&muted=1",
-    videoTitle: "Experiencia de vuelo privado de Red Sky Group en Instagram",
+    video: "images/Home/CATERIING/giv.mp4",
     image: "images/jet-interior-2.webp",
     alt: "Cabina privada",
   },
@@ -122,17 +121,42 @@ const content = {
     ],
   },
   fleet: {
-    eyebrow: "Acceso A Flota",
-    title: "Aeronaves alineadas con cada mision.",
+    eyebrow: "Operational Brief",
+    title: "Diseñado para clientes que no pueden perder tiempo.",
     description:
-      "Contamos con una flota versatil y moderna para ofrecer soluciones a la medida de cada necesidad.",
-    cta: "Ver Toda La Flota",
+      "Selección de aeronaves, revisión del itinerario y seguimiento operativo en un flujo preciso y discreto.",
+    cta: "Nuestra Flota",
     allLabel: "Todas",
     modelCta: "Ver modelos",
+    backgroundImage: "images/Home/FONDO/home1.png",
+    decorImage: "images/Home/FONDO/supermijet.png",
+    benefitsLabel: "Ventajas de flota",
+    benefits: [
+      {
+        icon: "coverage",
+        title: "Cobertura Global",
+        description: "Acceso a miles de aeropuertos en todo el mundo.",
+      },
+      {
+        icon: "operations",
+        title: "Operación 24/7",
+        description: "Disponibles en cualquier momento y lugar.",
+      },
+      {
+        icon: "secure",
+        title: "Discreción y Seguridad",
+        description: "Tu privacidad y seguridad son nuestra prioridad.",
+      },
+      {
+        icon: "tailored",
+        title: "Soluciones a la Medida",
+        description: "Nos adaptamos a tus necesidades con precisión.",
+      },
+    ],
     assurance: {
-      title: "Seguridad, experiencia y tecnologia en cada vuelo.",
+      title: "Seguridad, experiencia y tecnología en cada vuelo.",
       description:
-        "Certificaciones internacionales y estandares de la mas alta industria.",
+        "Certificaciones internacionales y prácticas aeronáuticas de alto nivel.",
     },
     items: [
       {
