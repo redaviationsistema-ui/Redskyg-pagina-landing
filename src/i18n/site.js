@@ -11,19 +11,18 @@ export const LOCALE_CONFIG = {
     label: "ES",
     header: {
       home: "Inicio",
-      requestFlight: "Solicitar vuelo",
+      requestFlight: "Cotizar vuelo",
       fleet: "Flota",
-      pricing: "Precios",
       contact: "Contacto",
     },
     layout: {
       whatsappCta: "Cotizar por WhatsApp",
       whatsappMessage:
-        "Hola, quiero cotizar un vuelo privado. ¿Podrían darme información?",
+        "Hola, quiero cotizar un vuelo privado con Sky Group. ¿Podrían compartirme opciones disponibles?",
     },
     footer: {
       description:
-        "Evita escalas, terminales saturadas y tiempos muertos con vuelos privados más ágiles, discretos y personalizados en México y el extranjero.",
+        "Coordinamos vuelos privados en México y el extranjero con atención discreta, respuesta inmediata y seguimiento ejecutivo antes, durante y después de cada misión.",
       rights: "© 2026 SKY GROUP. TODOS LOS DERECHOS RESERVADOS.",
       office: "Oficina principal",
       officeAddress:
@@ -39,57 +38,61 @@ export const LOCALE_CONFIG = {
     seo: {
       siteName: "Sky Group Aviation",
       defaultTitle:
-        "Sky Group Aviation | Aviación Privada en México y Estados Unidos",
+        "Sky Group Aviation | Aviación Privada en México y el Mundo",
       defaultDescription:
-        "Vuelos privados, charter ejecutivo y soluciones de aviación premium con rutas en México, Estados Unidos y destinos internacionales.",
-      homeTitle: "Renta de Jets Privados en México | Sky Group Aviation",
+        "Coordinación de vuelos privados, charter ejecutivo y soluciones de aviación premium con cobertura en México, Estados Unidos y destinos internacionales.",
+      homeTitle:
+        "Aviación Privada en México y el Mundo | Sky Group Aviation",
       homeDescription:
-        "Cotiza vuelos privados en México con Sky Group Aviation. Jets privados, vuelos ejecutivos, helicópteros y soluciones premium con atención inmediata.",
+        "Coordina tu vuelo privado con Sky Group Aviation. Aeronave, tripulación, itinerario y atención en tierra bajo una sola coordinación con respuesta inmediata.",
       pageMeta: {
         about: {
-          title: "Sobre Sky Group Aviation | Aviación Privada y Charter Ejecutivo",
+          title:
+            "Sobre Sky Group Aviation | Coordinación de Aviación Privada",
           description:
-            "Conoce a Sky Group Aviation, empresa de aviación privada en México con enfoque en charter ejecutivo, seguridad operativa y atención personalizada.",
+            "Conoce a Sky Group Aviation y su enfoque en coordinación de vuelos privados, atención personalizada, privacidad y disciplina operativa.",
         },
         pricing: {
-          title: "Precios de Vuelos Privados | Sky Group Aviation",
+          title: "Cotización de Vuelos Privados | Sky Group Aviation",
           description:
-            "Solicita precios de vuelos privados, jets ejecutivos y helicópteros con una cotización clara, personalizada y rápida.",
+            "Solicita una cotización de vuelo privado con opciones de aeronave, itinerario y atención ejecutiva adaptadas a tu misión.",
         },
         blog: {
           title: "Blog de Aviación Privada | Sky Group Aviation",
           description:
-            "Explora noticias, guías y contenido especializado sobre aviación privada, vuelos ejecutivos y tendencias del sector.",
+            "Explora guías, noticias y contenido especializado sobre aviación privada, coordinación de vuelos y tendencias del sector.",
         },
         faq: {
           title: "Preguntas Frecuentes | Sky Group Aviation",
           description:
-            "Resuelve tus dudas sobre vuelos privados, procesos de cotización, seguridad, tiempos de respuesta y servicios de aviación ejecutiva.",
+            "Resuelve tus dudas sobre cotización de vuelos privados, opciones de aeronave, coordinación operativa y atención ejecutiva.",
         },
         contact: {
           title: "Contacto | Sky Group Aviation",
           description:
-            "Habla con Sky Group Aviation para solicitar una propuesta de vuelo privado, disponibilidad de aeronaves y atención comercial inmediata.",
+            "Habla con Sky Group Aviation para solicitar una propuesta de vuelo privado, revisar opciones disponibles y recibir atención inmediata.",
         },
         fleet: {
-          title: "Flota Privada Disponible | Sky Group Aviation",
+          title:
+            "Aeronaves Disponibles para Vuelo Privado | Sky Group Aviation",
           description:
-            "Consulta opciones de flota para vuelos privados, jets ejecutivos y helicópteros según la ruta, capacidad y perfil de misión.",
+            "Consulta opciones de aeronaves disponibles para vuelos privados, jets ejecutivos y helicópteros según tu ruta, capacidad y perfil de misión.",
         },
         reserva: {
-          title: "Solicita tu Vuelo Privado | Sky Group Aviation",
+          title:
+            "Cotiza tu Vuelo Privado | Sky Group Aviation",
           description:
-            "Solicita tu vuelo privado con una cotización rápida, atención personalizada y coordinación ejecutiva para rutas en México y el extranjero.",
+            "Cotiza tu vuelo privado con atención personalizada, respuesta inmediata y coordinación ejecutiva para rutas en México y el extranjero.",
         },
         airports: {
           title: "Aeropuertos y Operación | Sky Group Aviation",
           description:
-            "Consulta información relevante sobre aeropuertos, accesos y coordinación operativa para viajes de aviación privada.",
+            "Consulta información relevante sobre accesos aeroportuarios, operación y coordinación para viajes de aviación privada.",
         },
         lookbooks: {
           title: "Biblioteca de Aeronaves | Sky Group Aviation",
           description:
-            "Explora eBooks, fichas técnicas y documentación exclusiva de aeronaves privadas de Sky Group Aviation.",
+            "Explora fichas técnicas, eBooks y documentación de aeronaves privadas para evaluar opciones según el tipo de misión.",
         },
         thankYou: {
           title: "Gracias por tu Solicitud | Sky Group Aviation",
@@ -105,14 +108,19 @@ export const LOCALE_CONFIG = {
     label: "EN",
     header: {
       home: "Home",
-      requestFlight: "Request Flight",
-      fleet: "Our Fleet",
+      requestFlight: "Quote Flight",
+      fleet: "Fleet",
       pricing: "Pricing",
       contact: "Contact",
     },
+    layout: {
+      whatsappCta: "Quote on WhatsApp",
+      whatsappMessage:
+        "Hello, I would like to quote a private flight with Sky Group. Could you share available options?",
+    },
     footer: {
       description:
-        "Sky Group is a private aviation company with over 20 years of experience, providing safe, efficient, and fully personalized private flight solutions across Mexico and worldwide.",
+        "We coordinate private flights across Mexico and worldwide with discreet support, immediate response and executive follow-up before, during and after each mission.",
       rights: "© 2026 SKY GROUP. ALL RIGHTS RESERVED.",
       office: "Main office",
       officeAddress:
@@ -128,48 +136,48 @@ export const LOCALE_CONFIG = {
     seo: {
       siteName: "Sky Group Aviation",
       defaultTitle:
-        "Private Jet Charter in the US and Mexico | Sky Group Aviation",
+        "Private Aviation in Mexico and Worldwide | Sky Group Aviation",
       defaultDescription:
-        "Private jet charter, helicopter operations, executive flights and premium aviation solutions across the United States, Mexico and worldwide.",
+        "Private flight coordination, executive charter support and premium aviation solutions across Mexico, the United States and international destinations.",
       homeTitle:
-        "Private Jet Charter in the US and Mexico | Sky Group Aviation",
+        "Private Aviation in Mexico and Worldwide | Sky Group Aviation",
       homeDescription:
-        "Request private jet charter and executive flights with Sky Group Aviation. Personalized schedules, premium aircraft access and worldwide support.",
+        "Coordinate your private flight with Sky Group Aviation. Aircraft, crew, itinerary and ground support under one coordination flow with immediate response.",
       pageMeta: {
         about: {
-          title: "About Sky Group Aviation | Private Aviation Experts",
+          title: "About Sky Group Aviation | Private Aviation Coordination",
           description:
-            "Learn about Sky Group Aviation, a private aviation company focused on executive charter, operational safety and personalized service.",
+            "Learn about Sky Group Aviation and its approach to private flight coordination, personalized support, privacy and operational discipline.",
         },
         pricing: {
-          title: "Private Flight Pricing | Sky Group Aviation",
+          title: "Private Flight Quote | Sky Group Aviation",
           description:
-            "Request private flight pricing for executive jets and helicopters with a fast, tailored and transparent quoting process.",
+            "Request a private flight quote with aircraft options, itinerary planning and executive support tailored to your mission.",
         },
         blog: {
           title: "Private Aviation Blog | Sky Group Aviation",
           description:
-            "Read private aviation insights, charter guidance and industry updates from Sky Group Aviation.",
+            "Read private aviation insights, coordination guidance and industry updates from Sky Group Aviation.",
         },
         faq: {
           title: "Frequently Asked Questions | Sky Group Aviation",
           description:
-            "Find answers about private flights, aircraft access, quoting, safety standards and executive aviation services.",
+            "Find answers about private flight quotes, aircraft options, operational coordination and executive aviation support.",
         },
         contact: {
           title: "Contact Sky Group Aviation",
           description:
-            "Contact Sky Group Aviation to request a private flight proposal, aircraft availability and direct commercial assistance.",
+            "Contact Sky Group Aviation to request a private flight proposal, review available options and receive immediate support.",
         },
         fleet: {
-          title: "Available Aircraft Fleet | Sky Group Aviation",
+          title: "Available Aircraft for Private Flights | Sky Group Aviation",
           description:
-            "Explore available aircraft options for private jet charter and helicopter services based on route, capacity and mission profile.",
+            "Explore available aircraft options for private flights, executive jets and helicopters based on route, capacity and mission profile.",
         },
         reserva: {
-          title: "Request a Private Flight | Sky Group Aviation",
+          title: "Quote Your Private Flight | Sky Group Aviation",
           description:
-            "Request a private flight with fast quoting, premium aircraft access and executive-level coordination.",
+            "Quote your private flight with personalized support, immediate response and executive coordination for routes in Mexico and abroad.",
         },
         airports: {
           title: "Airports and Operations | Sky Group Aviation",
@@ -179,7 +187,7 @@ export const LOCALE_CONFIG = {
         lookbooks: {
           title: "Aircraft Library | Sky Group Aviation",
           description:
-            "Browse private aircraft brochures, technical PDFs and premium aviation guides from Sky Group Aviation.",
+            "Browse aircraft brochures, technical PDFs and private aviation guides to evaluate mission-fit options.",
         },
         thankYou: {
           title: "Thank You | Sky Group Aviation",

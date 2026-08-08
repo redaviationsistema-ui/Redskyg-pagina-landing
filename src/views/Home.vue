@@ -4,89 +4,83 @@
 
 <script setup>
 import HomeLanding from "../components/HomeLanding.vue";
+import { getLocaleConfig } from "../i18n/site";
+
+const localeCopy = getLocaleConfig("en-us");
+const whatsappHref = `https://wa.me/525586186576?text=${encodeURIComponent(
+  localeCopy.layout.whatsappMessage,
+)}`;
 
 const content = {
   whatsapp: {
-    href: "https://wa.me/525586186576",
+    href: whatsappHref,
   },
   hero: {
     eyebrow: "Private Aviation in Mexico and Worldwide",
-    title: "Private Flights with executive control from takeoff to arrival.",
+    title: "Your private flight, coordinated from start to finish.",
     description:
-      "Sky Group LLC coordinates aircraft, crew and route execution for executives, family offices and time-sensitive travel.",
+      "Aircraft, crew, itinerary and ground support under one coordination flow. For travelers who value time, privacy and certainty.",
     benefits: [
-      "Immediate availability",
-      "Security and confidentiality",
-      "Personalized attention 24/7",
-      "Concierge service",
+      "Immediate response",
+      "24/7 support",
+      "Mexico · United States · International",
+      "Discrete, personalized attention",
     ],
-    primaryCta: "Request a Flight",
+    primaryCta: "Quote My Flight",
     secondaryCta: "Talk to an Advisor",
     poster: "images/jet-interior-2.webp",
     video: "images/Home/home2.mp4",
     metrics: [
       { value: "24/7", label: "flight coordination" },
-      { value: "20+", label: "years in aviation" },
-      { value: "MX / US", label: "regional support" },
+      { value: "Aviation", label: "coordination support" },
+      { value: "MX · US · Global", label: "international coverage" },
     ],
   },
-  signals: ["No lines", "No layovers", "Private terminals", "Direct support"],
+  signals: ["Availability", "Precision", "Privacy", "Continuity"],
   why: {
-    eyebrow: "Benefits",
-    title: "Private aviation designed around speed, privacy and certainty.",
+    eyebrow: "Why Sky Group",
+    title: "Private aviation coordination built around your itinerary.",
     items: [
       {
-        icon: "globe",
-        title: "Worldwide coverage",
+        icon: "sparkles",
+        title: "Availability",
         description:
-          "Regional and international aircraft access through one point of contact.",
+          "Aircraft options aligned with your itinerary, travel profile and mission requirements.",
       },
       {
         icon: "route",
-        title: "Clear proposals",
+        title: "Precision",
         description:
-          "Aircraft options aligned with route, schedule and mission profile.",
-      },
-      {
-        icon: "clock",
-        title: "Airport flexibility",
-        description:
-          "Practical routing and airport access support for smoother departures.",
-      },
-      {
-        icon: "handshake",
-        title: "Client relationships",
-        description:
-          "Executive service for recurring corporate and private travel.",
-      },
-      {
-        icon: "sparkles",
-        title: "Rapid activation",
-        description:
-          "Responsive coordination for urgent and time-sensitive itineraries.",
+          "Route, timing and operations coordinated around your mission from the first request.",
       },
       {
         icon: "shield",
-        title: "Safety focus",
+        title: "Privacy",
         description:
-          "Qualified crews, compliance awareness and disciplined execution.",
+          "Discreet support for passengers, families and executive teams that need certainty.",
+      },
+      {
+        icon: "handshake",
+        title: "Continuity",
+        description:
+          "One point of contact before, during and after the flight to keep every detail in sync.",
       },
     ],
   },
   experience: {
-    eyebrow: "Social Proof",
-    title: "Real flight moments, handled with executive precision.",
+    eyebrow: "The Sky Group Experience",
+    title: "The difference is what happens before takeoff.",
     description:
-      "Executive departures, ground support and private cabin environments.",
+      "Ground coordination, catering, transportation, passenger support and itinerary follow-up as part of one carefully managed experience.",
     video: "images/Home/CATERIING/giv.mp4",
     image: "images/jet-interior-2.webp",
     alt: "Private cabin experience",
   },
   catering: {
-    eyebrow: "Onboard Catering",
-    title: "An experience considered down to the last detail.",
+    eyebrow: "Beyond the Flight",
+    title: "Every detail can be part of the journey.",
     description:
-      "A curated culinary selection designed to complement your flight with freshness, presentation and executive service.",
+      "Catering, ground transportation, concierge support and special requests as part of a passenger-focused coordination experience.",
     imageAlt: "Private flight catering service",
     previousLabel: "View previous catering image",
     nextLabel: "View next catering image",
@@ -95,63 +89,61 @@ const content = {
   },
   flow: {
     eyebrow: "How It Works",
-    title: "Request your private flight in three controlled steps.",
+    title: "Request, select and fly.",
     description:
-      "Clear options, direct communication and operational discipline from the first request to departure.",
+      "A clear process to quote your mission, review available options and coordinate the right flight without unnecessary friction.",
     steps: [
       {
-        title: "Request a quote",
-        description: "Share route, date and passengers to activate your request.",
+        title: "Request",
+        description: "Route, date and passengers.",
       },
       {
-        title: "Receive options",
-        description:
-          "Receive aircraft and schedule options tailored to the mission.",
+        title: "Select",
+        description: "Receive aircraft and itinerary options.",
       },
       {
-        title: "Confirm and fly",
-        description:
-          "Confirm the best option and depart with direct coordination.",
+        title: "Fly",
+        description: "We confirm and coordinate your mission.",
       },
     ],
   },
   fleet: {
-    eyebrow: "Operational Brief",
-    title: "Built for clients who cannot lose time.",
+    eyebrow: "Available Aircraft",
+    title: "Flight options for travelers who cannot lose time.",
     description:
-      "Aircraft selection, itinerary review and operational follow-up in one precise, discreet flow.",
-    cta: "Our Fleet",
+      "Private jets, turboprops and helicopters selected according to route, capacity, range and mission profile.",
+    cta: "View Available Aircraft",
     allLabel: "All",
     modelCta: "View models",
     backgroundImage: "images/Home/FONDO/home1.png",
     decorImage: "images/Home/FONDO/supermijet.png",
-    benefitsLabel: "Fleet advantages",
+    benefitsLabel: "Operational advantages",
     benefits: [
       {
         icon: "coverage",
-        title: "Global Coverage",
-        description: "Access to thousands of airports worldwide.",
+        title: "Access to more airports",
+        description: "More departure and arrival alternatives depending on the operation and itinerary.",
       },
       {
         icon: "operations",
-        title: "24/7 Operations",
-        description: "We are available anytime, anywhere.",
+        title: "Immediate response",
+        description: "Continuous support to review options and coordinate each request quickly.",
       },
       {
         icon: "secure",
-        title: "Discreet & Secure",
-        description: "Your privacy and safety are our priority.",
+        title: "Privacy and discretion",
+        description: "Support designed for passengers who require confidentiality, order and close follow-up.",
       },
       {
         icon: "tailored",
-        title: "Tailored Solutions",
-        description: "We adapt to your needs with precision.",
+        title: "Tailored options",
+        description: "Aircraft and operations aligned with the trip type, passengers and available timing.",
       },
     ],
     assurance: {
-      title: "Safety, experience and technology on every flight.",
+      title: "Operational coordination and executive support in every request.",
       description:
-        "International certifications and high-standard aviation practices.",
+        "We present flight options and support planning with clear follow-up before takeoff.",
     },
     items: [
       {
@@ -229,29 +221,30 @@ const content = {
     ],
   },
   trust: {
-    eyebrow: "Operational Trust",
-    title: "Safety standards and experience behind every operation.",
+    eyebrow: "Experience and Credibility",
+    title: "Real content, direct support and operational follow-up.",
     description:
-      "Every flight is managed with compliance awareness, qualified coordination and proven executive aviation experience.",
+      "The Sky Group experience is reflected in itinerary coordination, passenger care and visible attention to detail throughout the journey.",
     badge: "images/Home/ISBAO.png",
     badgeAlt: "IS-BAO certification",
     items: [
-      "Operational safety",
-      "Standards and compliance",
-      "Proven experience",
+      "Ground coordination",
+      "Passenger support",
+      "Itinerary follow-up",
     ],
   },
   lookbooks: {
     enabled: true,
   },
   cta: {
-    eyebrow: "Final CTA",
-    title: "Ready to move with private aviation precision?",
+    eyebrow: "Flight Request",
+    title: "Your next flight starts with a conversation.",
     description:
-      "Share your route and receive aircraft options, timing and direct operational support.",
-    primary: "Request Your Flight",
+      "Tell us your origin, destination, date and passenger count. Our team will prepare the most suitable options for your mission.",
+    primary: "Request a Quote",
     phoneHref: "tel:+525586186576",
     phoneLabel: "+52 55 8618 6576",
+    supportingText: "Private support · 24/7 · Mexico and international",
   },
 };
 </script>

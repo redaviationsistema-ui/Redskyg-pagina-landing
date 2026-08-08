@@ -441,6 +441,9 @@
               {{ content.cta.phoneLabel }}
             </a>
           </div>
+          <p v-if="content.cta.supportingText" class="final-support">
+            {{ content.cta.supportingText }}
+          </p>
         </div>
       </section>
     </div>
@@ -891,6 +894,15 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.final-support {
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .hero-actions {
@@ -2467,7 +2479,7 @@ onBeforeUnmount(() => {
   .flow-shell { width: min(100% - 40px, 1200px); }
   .flow-heading h2 { font-size: clamp(2.25rem, 10.5vw, 2.625rem); line-height: 1.02; }
   .flow-steps { grid-template-columns: 1fr; gap: 24px; margin-top: 48px; padding-bottom: 0; }
-  .flow-step { min-height: 350px; padding: 42px 28px 34px; }
+  .flow-step { min-height: 300px; padding: 34px 24px 28px; }
   .flow-connector { display: none; }
 
   .experience--video {

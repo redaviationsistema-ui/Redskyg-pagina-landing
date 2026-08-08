@@ -8,14 +8,14 @@
 
     <a
       class="floating-whatsapp"
-      href="https://wa.me/525586186576?text=Hola,%20quiero%20solicitar%20una%20cotizacion%20de%20vuelo%20privado."
+      :href="whatsappHref"
       target="_blank"
       rel="noreferrer"
       aria-label="Contactar por WhatsApp"
     >
       <transition name="whatsapp-bubble">
         <span v-if="showWhatsappBubble" class="floating-whatsapp-bubble">
-          Contactanos directamente
+          Cotiza por WhatsApp
         </span>
       </transition>
       <img src="/images/social/whatsapp.svg" alt="" />
@@ -26,11 +26,20 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import AppHeader from "../components/AppHeader.vue";
 import AppFooter from "../components/AppFooter.vue";
+import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
 
 const showWhatsappBubble = ref(true);
+const { localeConfig } = useLocalizedNavigation();
+const whatsappHref = computed(
+  () =>
+    `https://wa.me/525586186576?text=${encodeURIComponent(
+      localeConfig.value.layout?.whatsappMessage ??
+        "Hola, quiero cotizar un vuelo privado con Sky Group. ¿Podrían compartirme opciones disponibles?",
+    )}`,
+);
 let whatsappBubbleTimeout = null;
 
 onMounted(() => {
@@ -63,8 +72,8 @@ onBeforeUnmount(() => {
 
 .floating-whatsapp {
   position: fixed;
-  right: 22px;
-  bottom: 22px;
+  right: 28px;
+  bottom: 28px;
   z-index: 10040;
   display: inline-flex;
   align-items: center;
@@ -156,10 +165,10 @@ onBeforeUnmount(() => {
 
 @media (max-width: 640px) {
   .floating-whatsapp {
-    right: 16px;
-    bottom: 16px;
-    width: 64px;
-    height: 64px;
+    right: 20px;
+    bottom: 20px;
+    width: 50px;
+    height: 50px;
   }
 
   .floating-whatsapp-bubble {
@@ -169,8 +178,8 @@ onBeforeUnmount(() => {
   }
 
   .floating-whatsapp img {
-    width: 34px;
-    height: 34px;
+    width: 26px;
+    height: 26px;
   }
 }
 </style>

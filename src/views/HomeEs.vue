@@ -4,93 +4,88 @@
 
 <script setup>
 import HomeLanding from "../components/HomeLanding.vue";
+import { getLocaleConfig } from "../i18n/site";
+
+const localeCopy = getLocaleConfig("es-mx");
+const whatsappHref = `https://wa.me/525586186576?text=${encodeURIComponent(
+  localeCopy.layout.whatsappMessage,
+)}`;
 
 const content = {
   whatsapp: {
-    href: "https://wa.me/525586186576?text=Hola,%20quiero%20solicitar%20una%20cotizacion%20de%20vuelo%20privado.",
+    href: whatsappHref,
   },
   hero: {
-    eyebrow: "Aviacion privada en Mexico y el mundo",
-    title: "Vuelo Privado con control ejecutivo de salida a llegada.",
+    eyebrow: "Aviación privada en México y el mundo",
+    title: "Tu vuelo privado, coordinado de principio a fin.",
     description:
-      "Sky Group LLC coordina aeronave, tripulacion y ruta para ejecutivos, familias y viajes donde el tiempo no puede esperar.",
+      "Aeronave, tripulación, itinerario y atención en tierra bajo una sola coordinación. Para quienes valoran su tiempo, privacidad y certeza.",
     benefits: [
-      "Disponibilidad inmediata",
-      "Seguridad y confidencialidad",
-      "Atencion personalizada 24/7",
-      "Servicio Concierge",
+      "Respuesta inmediata",
+      "Atención 24/7",
+      "México · Estados Unidos · Internacional",
+      "Atención discreta y personalizada",
     ],
-    primaryCta: "Cotizar vuelo ahora",
-    secondaryCta: "Recibir cotizacion en minutos",
+    primaryCta: "Cotizar mi vuelo",
+    secondaryCta: "Hablar con un asesor",
     poster: "images/jet-interior-2.webp",
     video: "images/Home/home2.mp4",
     metrics: [
-      { value: "24/7", label: "coordinacion de vuelo" },
-      { value: "20+", label: "años en aviacion" },
-      { value: "MX / US", label: "soporte regional" },
+      { value: "24/7", label: "Coordinación de vuelo" },
+      { value: "Experiencia", label: "Atención aeronáutica" },
+      { value: "MX · US · Global", label: "Cobertura internacional" },
     ],
   },
   signals: [
-    "Sin filas",
-    "Sin escalas",
-    "Aeropuertos privados",
-    "Atencion personalizada",
+    "Disponibilidad",
+    "Precisión operativa",
+    "Privacidad",
+    "Continuidad",
   ],
   why: {
-    eyebrow: "Por Que Sky Group",
-    title: "Aviacion privada diseñada para velocidad, privacidad y certeza.",
+    eyebrow: "Por qué Sky Group",
+    title: "Una coordinación de vuelo pensada para tu itinerario.",
     items: [
       {
-        icon: "globe",
-        title: "Cobertura global",
+        icon: "sparkles",
+        title: "Disponibilidad",
         description:
-          "Acceso regional e internacional con un solo punto de contacto.",
+          "Opciones de aeronave alineadas con tu itinerario, perfil de viaje y necesidades de misión.",
       },
       {
         icon: "route",
-        title: "Propuestas claras",
+        title: "Precisión",
         description:
-          "Opciones alineadas con ruta, horario y perfil de mision.",
-      },
-      {
-        icon: "clock",
-        title: "Flexibilidad aeroportuaria",
-        description:
-          "Soporte en rutas, aeropuertos y salidas mas eficientes.",
-      },
-      {
-        icon: "handshake",
-        title: "Relacion ejecutiva",
-        description:
-          "Servicio pensado para viajes corporativos y privados recurrentes.",
-      },
-      {
-        icon: "sparkles",
-        title: "Activacion inmediata",
-        description:
-          "Coordinacion agil para salidas urgentes e itinerarios sensibles.",
+          "Ruta, horarios y operación coordinados alrededor de tu misión desde la primera solicitud.",
       },
       {
         icon: "shield",
-        title: "Enfoque en seguridad",
+        title: "Privacidad",
         description:
-          "Tripulaciones calificadas, cumplimiento y ejecucion disciplinada.",
+          "Atención discreta para pasajeros, familias y equipos ejecutivos que necesitan certeza.",
+      },
+      {
+        icon: "handshake",
+        title: "Continuidad",
+        description:
+          "Un solo punto de contacto antes, durante y después del vuelo para dar seguimiento a cada detalle.",
       },
     ],
   },
   experience: {
-    eyebrow: "Prueba Social",
-    title: "Experiencia real con precision y calidad ejecutiva.",
-    description: "Salidas ejecutivas, atencion en tierra y cabinas privadas.",
+    eyebrow: "Experiencia Sky Group",
+    title: "La diferencia está en lo que sucede antes de despegar.",
+    description:
+      "Coordinación en tierra, catering, transporte, atención al pasajero y seguimiento del itinerario en una experiencia cuidada de principio a fin.",
     video: "images/Home/CATERIING/giv.mp4",
     image: "images/jet-interior-2.webp",
     alt: "Cabina privada",
   },
   catering: {
-    eyebrow: "Catering a bordo",
-    title: "Una experiencia cuidada hasta el último detalle.",
+    eyebrow: "Más allá del vuelo",
+    title: "Cada detalle también puede ser parte del viaje.",
     description:
-      "Selección gastronómica preparada para acompañar tu vuelo con presentación, frescura y servicio ejecutivo.",
+      "Catering, transporte terrestre, concierge y solicitudes especiales como parte de una coordinación pensada para el pasajero.",
     imageAlt: "Servicio de catering para vuelo privado",
     previousLabel: "Ver imagen anterior de catering",
     nextLabel: "Ver siguiente imagen de catering",
@@ -99,64 +94,61 @@ const content = {
   },
   flow: {
     eyebrow: "Cómo funciona",
-    title: "Solicita tu vuelo privado en tres pasos.",
+    title: "Solicita, selecciona y vuela.",
     description:
-      "Opciones claras, comunicación directa y disciplina operativa desde la primera solicitud hasta el despegue.",
+      "Un proceso claro para cotizar, elegir la mejor opción disponible y coordinar tu misión sin fricción innecesaria.",
     steps: [
       {
-        title: "Solicitas cotización",
-        description:
-          "Comparte ruta, fecha y pasajeros para activar tu solicitud.",
+        title: "Solicita",
+        description: "Ruta, fecha y pasajeros.",
       },
       {
-        title: "Recibes opciones",
-        description:
-          "Te enviamos las mejores opciones de aeronaves y horarios.",
+        title: "Selecciona",
+        description: "Recibe opciones de aeronave e itinerario.",
       },
       {
-        title: "Confirmas y vuelas",
-        description:
-          "Confirma la mejor opción y despega con coordinación directa.",
+        title: "Vuela",
+        description: "Confirmamos y coordinamos tu misión.",
       },
     ],
   },
   fleet: {
-    eyebrow: "Operational Brief",
-    title: "Diseñado para clientes que no pueden perder tiempo.",
+    eyebrow: "Aeronaves disponibles",
+    title: "Opciones de vuelo para quienes no pueden perder tiempo.",
     description:
-      "Selección de aeronaves, revisión del itinerario y seguimiento operativo en un flujo preciso y discreto.",
-    cta: "Nuestra Flota",
+      "Jets privados, turbohélices y helicópteros seleccionados según ruta, capacidad, alcance y perfil de misión.",
+    cta: "Ver aeronaves disponibles",
     allLabel: "Todas",
     modelCta: "Ver modelos",
     backgroundImage: "images/Home/FONDO/home1.png",
     decorImage: "images/Home/FONDO/supermijet.png",
-    benefitsLabel: "Ventajas de flota",
+    benefitsLabel: "Ventajas operativas",
     benefits: [
       {
         icon: "coverage",
-        title: "Cobertura Global",
-        description: "Acceso a miles de aeropuertos en todo el mundo.",
+        title: "Acceso a más aeropuertos",
+        description: "Más alternativas de salida y llegada según la operación y el itinerario.",
       },
       {
         icon: "operations",
-        title: "Operación 24/7",
-        description: "Disponibles en cualquier momento y lugar.",
+        title: "Respuesta inmediata",
+        description: "Atención continua para revisar opciones y coordinar cada solicitud con agilidad.",
       },
       {
         icon: "secure",
-        title: "Discreción y Seguridad",
-        description: "Tu privacidad y seguridad son nuestra prioridad.",
+        title: "Privacidad y discreción",
+        description: "Atención enfocada en pasajeros que requieren reserva, orden y seguimiento puntual.",
       },
       {
         icon: "tailored",
-        title: "Soluciones a la Medida",
-        description: "Nos adaptamos a tus necesidades con precisión.",
+        title: "Opciones a la medida",
+        description: "Aeronaves y operación alineadas con el tipo de viaje, pasajeros y tiempos disponibles.",
       },
     ],
     assurance: {
-      title: "Seguridad, experiencia y tecnología en cada vuelo.",
+      title: "Coordinación operativa y atención ejecutiva en cada solicitud.",
       description:
-        "Certificaciones internacionales y prácticas aeronáuticas de alto nivel.",
+        "Mostramos opciones de vuelo y acompañamos la planeación con seguimiento claro antes de despegar.",
     },
     items: [
       {
@@ -234,29 +226,30 @@ const content = {
     ],
   },
   trust: {
-    eyebrow: "Confianza Operativa",
-    title: "Estandares de seguridad y experiencia detras de cada operacion.",
+    eyebrow: "Experiencia y credibilidad",
+    title: "Contenido real, atención directa y seguimiento operativo.",
     description:
-      "Cada vuelo se gestiona con enfoque en cumplimiento, coordinacion calificada y experiencia real en aviacion ejecutiva.",
+      "La experiencia Sky Group se refleja en la coordinación del itinerario, la atención al pasajero y el cuidado visible en cada etapa del viaje.",
     badge: "images/Home/ISBAO.png",
     badgeAlt: "Certificacion IS-BAO",
     items: [
-      "Seguridad operacional",
-      "Estandares y cumplimiento",
-      "Experiencia comprobada",
+      "Coordinación en tierra",
+      "Atención al pasajero",
+      "Seguimiento del itinerario",
     ],
   },
   lookbooks: {
     enabled: true,
   },
   cta: {
-    eyebrow: "Cotizacion Ejecutiva",
-    title: "Cotizacion en minutos, seguimiento humano y ejecucion ejecutiva.",
+    eyebrow: "Solicitud de vuelo",
+    title: "Tu próximo vuelo comienza con una conversación.",
     description:
-      "Comparte tu ruta y recibe opciones de aeronave, tiempos y soporte operativo directo.",
-    primary: "Recibir cotizacion en minutos",
+      "Dinos origen, destino, fecha y número de pasajeros. Nuestro equipo preparará las opciones más adecuadas para tu misión.",
+    primary: "Solicitar cotización",
     phoneHref: "tel:+525586186576",
     phoneLabel: "+52 55 8618 6576",
+    supportingText: "Atención privada · 24/7 · México e internacional",
   },
 };
 </script>

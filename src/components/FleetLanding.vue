@@ -655,6 +655,47 @@ const normalizeText = (value) =>
     .toLowerCase()
     .trim();
 
+const buildAircraftDedupKey = (item) => {
+  const name = normalizeText(item?.nombre);
+  const base = normalizeText(item?.base || item?.base_city);
+  return name && base ? `${name}::${base}` : "";
+};
+
+const dedupeAircraftList = (items) => {
+  const seen = new globalThis.Map();
+
+  items.forEach((item) => {
+    const key = buildAircraftDedupKey(item);
+
+    if (!key) {
+      seen.set(`fallback::${item.id}`, item);
+      return;
+    }
+
+    const current = seen.get(key);
+
+    if (!current) {
+      seen.set(key, item);
+      return;
+    }
+
+    const currentScore =
+      Number(Boolean(current.disponible)) * 100 +
+      Number(Boolean(current.imagenes?.length)) * 10 +
+      Number(current.precio_renta_usd || 0);
+    const nextScore =
+      Number(Boolean(item.disponible)) * 100 +
+      Number(Boolean(item.imagenes?.length)) * 10 +
+      Number(item.precio_renta_usd || 0);
+
+    if (nextScore > currentScore) {
+      seen.set(key, item);
+    }
+  });
+
+  return Array.from(seen.values());
+};
+
 const normalizeAircraftCategory = (value) => {
   const normalized = normalizeText(value);
 
@@ -1007,7 +1048,7 @@ const loadFleet = async () => {
     }),
   );
 
-  allAircraft.value = mappedAircraft;
+  allAircraft.value = dedupeAircraftList(mappedAircraft);
 
   loadingMore.value = false;
 };
