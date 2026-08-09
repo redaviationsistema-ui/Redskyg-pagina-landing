@@ -198,6 +198,7 @@
                 <component :is="fleetBenefitIconFor(benefit.icon)" aria-hidden="true" />
               </span>
               <div>
+                <span v-if="benefit.label" class="fleet-benefit__label">{{ benefit.label }}</span>
                 <strong>{{ benefit.title }}</strong>
                 <p>{{ benefit.description }}</p>
               </div>
@@ -592,10 +593,10 @@ const renderFleetTitle = (title = "") => {
     );
   }
 
-  if (title.includes("que no pueden perder tiempo")) {
+  if (title.includes("quienes entienden el valor de su tiempo")) {
     return title.replace(
-      "que no pueden perder tiempo",
-      'que<br><span class="fleet-copy__emphasis">no pueden perder tiempo</span>',
+      "quienes entienden el valor de su tiempo",
+      'quienes<br><span class="fleet-copy__emphasis">entienden el valor de su tiempo</span>',
     );
   }
 
@@ -2010,6 +2011,17 @@ onBeforeUnmount(() => {
 .fleet-benefit__icon svg {
   width: 24px;
   height: 24px;
+}
+
+.fleet-benefit__label {
+  display: block;
+  margin-bottom: 0.38rem;
+  color: #2f74b4;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  line-height: 1.25;
+  text-transform: uppercase;
 }
 
 .fleet-benefit strong {

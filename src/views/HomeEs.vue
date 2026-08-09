@@ -19,7 +19,7 @@ const content = {
     eyebrow: "Aviación privada en México y el mundo",
     title: "Tu vuelo privado, coordinado de principio a fin.",
     description:
-      "Aeronave, tripulación, itinerario y atención en tierra bajo una sola coordinación. Para quienes valoran su tiempo, privacidad y certeza.",
+      "Tu destino, tus horarios, tus prioridades. Una experiencia de vuelo diseñada alrededor de ti.",
     benefits: [
       "Respuesta inmediata",
       "Atención 24/7",
@@ -32,13 +32,13 @@ const content = {
     video: "images/Home/home2.mp4",
     metrics: [
       { value: "24/7", label: "Coordinación de vuelo" },
-      { value: "Experiencia", label: "Atención aeronáutica" },
+      { value: "Experiencia", label: "25 años de servicio continuo" },
       { value: "MX · US · Global", label: "Cobertura internacional" },
     ],
   },
   signals: [
     "Disponibilidad",
-    "Precisión operativa",
+    "Solidez operativa",
     "Privacidad",
     "Continuidad",
   ],
@@ -114,9 +114,9 @@ const content = {
   },
   fleet: {
     eyebrow: "Aeronaves disponibles",
-    title: "Opciones de vuelo para quienes no pueden perder tiempo.",
+    title: "Opciones de vuelo para quienes entienden el valor de su tiempo.",
     description:
-      "Jets privados, turbohélices y helicópteros seleccionados según ruta, capacidad, alcance y perfil de misión.",
+      "Seleccionamos la aeronave adecuada, coordinamos cada etapa del itinerario y mantenemos un solo punto de contacto durante toda la misión.",
     cta: "Ver aeronaves disponibles",
     allLabel: "Todas",
     modelCta: "Ver modelos",
@@ -126,23 +126,27 @@ const content = {
     benefits: [
       {
         icon: "coverage",
+        label: "Más cerca de tu destino",
         title: "Acceso a más aeropuertos",
-        description: "Más alternativas de salida y llegada según la operación y el itinerario.",
+        description: "Amplía tus posibilidades de salida y llegada, acercándote más a donde realmente necesitas estar.",
       },
       {
         icon: "operations",
-        title: "Respuesta inmediata",
-        description: "Atención continua para revisar opciones y coordinar cada solicitud con agilidad.",
+        label: "Tu agenda marca el vuelo",
+        title: "Flexibilidad a tu ritmo",
+        description: "Horarios y alternativas de vuelo que se adaptan a tus planes, no al contrario.",
       },
       {
         icon: "secure",
-        title: "Privacidad y discreción",
-        description: "Atención enfocada en pasajeros que requieren reserva, orden y seguimiento puntual.",
+        label: "Viaja con total privacidad",
+        title: "Discreción en cada momento",
+        description: "Una experiencia reservada, personalizada y cuidada desde tu llegada hasta tu destino.",
       },
       {
         icon: "tailored",
-        title: "Opciones a la medida",
-        description: "Aeronaves y operación alineadas con el tipo de viaje, pasajeros y tiempos disponibles.",
+        label: "El avión correcto para cada viaje",
+        title: "Una solución para cada misión",
+        description: "Seleccionamos la aeronave más adecuada según tu destino, pasajeros, alcance y preferencias.",
       },
     ],
     assurance: {
@@ -227,7 +231,7 @@ const content = {
   },
   trust: {
     eyebrow: "Experiencia y credibilidad",
-    title: "Contenido real, atención directa y seguimiento operativo.",
+    title: "Operación sólida, atención al cliente y seguimiento operativo.",
     description:
       "La experiencia Sky Group se refleja en la coordinación del itinerario, la atención al pasajero y el cuidado visible en cada etapa del viaje.",
     badge: "images/Home/ISBAO.png",

@@ -121,23 +121,27 @@ const content = {
     benefits: [
       {
         icon: "coverage",
+        label: "Closer to your destination",
         title: "Access to more airports",
-        description: "More departure and arrival alternatives depending on the operation and itinerary.",
+        description: "Expand your departure and arrival options, bringing you closer to where you truly need to be.",
       },
       {
         icon: "operations",
-        title: "Immediate response",
-        description: "Continuous support to review options and coordinate each request quickly.",
+        label: "Your schedule sets the flight",
+        title: "Flexibility at your pace",
+        description: "Flight times and alternatives that adapt to your plans, not the other way around.",
       },
       {
         icon: "secure",
-        title: "Privacy and discretion",
-        description: "Support designed for passengers who require confidentiality, order and close follow-up.",
+        label: "Travel in complete privacy",
+        title: "Discretion at every moment",
+        description: "A private, personalized experience, carefully managed from your arrival to your destination.",
       },
       {
         icon: "tailored",
-        title: "Tailored options",
-        description: "Aircraft and operations aligned with the trip type, passengers and available timing.",
+        label: "The right aircraft for every journey",
+        title: "A solution for every mission",
+        description: "We select the most suitable aircraft based on your destination, passengers, range and preferences.",
       },
     ],
     assurance: {
