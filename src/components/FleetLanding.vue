@@ -1987,13 +1987,20 @@ onBeforeUnmount(() => stopAutoSlide());
 
 .modal-media {
   position: relative;
-  background: var(--fleet-navy);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
 .modal-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(70vh, 560px);
+  object-fit: contain;
+  object-position: center;
 }
 
 .modal-controls {
@@ -2291,6 +2298,7 @@ onBeforeUnmount(() => stopAutoSlide());
 
   .modal-media {
     min-height: 280px;
+    padding: 18px;
   }
 
   .modal-info {
