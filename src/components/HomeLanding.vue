@@ -2121,7 +2121,7 @@ onBeforeUnmount(() => {
 }
 
 .trust-mark img {
-  width: min(72%, 270px);
+  width: min(900%, 490px);
   height: auto;
 }
 

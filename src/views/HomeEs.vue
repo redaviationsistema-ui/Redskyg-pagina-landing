@@ -234,7 +234,7 @@ const content = {
     title: "Operación sólida, atención al cliente y seguimiento operativo.",
     description:
       "La experiencia Sky Group se refleja en la coordinación del itinerario, la atención al pasajero y el cuidado visible en cada etapa del viaje.",
-    badge: "images/Home/ISBAO.png",
+    badge: "images/Home/CATERIING/experiencia.png",
     badgeAlt: "Certificacion IS-BAO",
     items: [
       "Coordinación en tierra",

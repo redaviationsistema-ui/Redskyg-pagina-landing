@@ -229,7 +229,7 @@ const content = {
     title: "Real content, direct support and operational follow-up.",
     description:
       "The Sky Group experience is reflected in itinerary coordination, passenger care and visible attention to detail throughout the journey.",
-    badge: "images/Home/ISBAO.png",
+    badge: "images/Home/CATERIING/experiencia.png",
     badgeAlt: "IS-BAO certification",
     items: [
       "Ground coordination",
