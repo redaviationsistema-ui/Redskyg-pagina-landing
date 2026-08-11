@@ -2821,9 +2821,12 @@ watch(
 .reservation-copy h1,
 .full-request__copy h2 {
   margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(2.1rem, 4vw, 3.55rem);
+  font-weight: 500;
   line-height: 0.98;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
 }
 
 .reservation-copy > p:last-child,
@@ -2866,7 +2869,9 @@ watch(
 .flight-card-header h2 {
   margin: 0;
   color: #ffffff;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1.2rem, 2vw, 1.55rem);
+  font-weight: 500;
   line-height: 1.1;
   letter-spacing: -0.01em;
 }
@@ -3372,7 +3377,10 @@ watch(
 .process-card h2,
 .why-card h2 {
   margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 1.18rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
 }
 
 .process-grid,
@@ -3440,6 +3448,64 @@ watch(
 
 .trust-item > svg {
   color: var(--gold);
+}
+
+.process-item:nth-child(1) .icon-ring svg { animation: reserveRadar 3s linear infinite; }
+.process-item:nth-child(2) .icon-ring svg { animation: reserveTakeoff 3.5s ease-in-out infinite; }
+.process-item:nth-child(3) .icon-ring svg { animation: reserveDocument 3.2s ease-in-out infinite; }
+.process-item:nth-child(4) .icon-ring svg { animation: reserveShield 2.8s ease-in-out infinite; }
+
+.trust-item:nth-child(1) > svg { animation: reserveCalendar 3s ease-in-out infinite; }
+.trust-item:nth-child(2) > svg { animation: reserveShield 2.8s ease-in-out -0.8s infinite; }
+.trust-item:nth-child(3) > svg { animation: reserveSupport 2.6s ease-in-out infinite; }
+.trust-item:nth-child(4) > svg { animation: reserveLock 3.2s ease-in-out infinite; }
+
+@keyframes reserveRadar {
+  0% { transform: rotate(0deg) scale(0.92); }
+  50% { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(0.92); }
+}
+
+@keyframes reserveTakeoff {
+  0%, 18%, 100% { opacity: 1; transform: translate(-4px, 4px) rotate(-8deg); }
+  55%, 72% { opacity: 1; transform: translate(5px, -5px) rotate(-16deg); }
+  82% { opacity: 0; transform: translate(10px, -10px) rotate(-16deg); }
+  83% { opacity: 0; transform: translate(-6px, 5px) rotate(-8deg); }
+}
+
+@keyframes reserveDocument {
+  0%, 22%, 100% { transform: translateY(0) scaleY(0.94); }
+  45%, 68% { transform: translateY(-3px) scaleY(1.06); }
+}
+
+@keyframes reserveShield {
+  0%, 100% { transform: scale(0.94); filter: drop-shadow(0 0 0 rgba(201,163,90,0)); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(201,163,90,0.48)); }
+}
+
+@keyframes reserveCalendar {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(-3px); }
+  60% { transform: translateY(1px); }
+}
+
+@keyframes reserveSupport {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  35% { transform: rotate(-5deg) scale(1.06); }
+  65% { transform: rotate(5deg) scale(1.06); }
+}
+
+@keyframes reserveLock {
+  0%, 28%, 100% { transform: translateY(0) scale(1); }
+  42% { transform: translateY(-3px) scale(1.08); }
+  58% { transform: translateY(1px) scale(0.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .process-item .icon-ring svg,
+  .trust-item > svg {
+    animation: none !important;
+  }
 }
 
 .why-grid {

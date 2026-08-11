@@ -1278,8 +1278,10 @@ onBeforeUnmount(() => stopAutoSlide());
   color: #ffffff;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(3.4rem, 6.4vw, 6.4rem);
-  font-weight: 700;
+  font-weight: 500;
   line-height: 0.95;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
 }
 
 .fleet-hero p {
@@ -1402,7 +1404,10 @@ onBeforeUnmount(() => stopAutoSlide());
   color: var(--fleet-ink);
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(2rem, 4vw, 3.6rem);
+  font-weight: 500;
   line-height: 0.98;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
 }
 
 .fleet-intro p {
@@ -1719,7 +1724,9 @@ onBeforeUnmount(() => stopAutoSlide());
   color: var(--fleet-ink);
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1.75rem, 2.8vw, 2.55rem);
+  font-weight: 500;
   line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .aircraft-main p {
@@ -2034,7 +2041,9 @@ onBeforeUnmount(() => stopAutoSlide());
   color: var(--fleet-ink);
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 500;
   line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .modal-specs {

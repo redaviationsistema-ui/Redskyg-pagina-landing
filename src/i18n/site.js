@@ -13,6 +13,11 @@ export const LOCALE_CONFIG = {
       home: "Inicio",
       requestFlight: "Cotizar vuelo",
       fleet: "Flota",
+      experiences: "Experiencias",
+      pricing: "Precios",
+      flights: "Vuelos",
+      destinations: "Destinos",
+      about: "Nosotros",
       contact: "Contacto",
     },
     layout: {
@@ -78,6 +83,10 @@ export const LOCALE_CONFIG = {
           description:
             "Consulta opciones de aeronaves disponibles para vuelos privados, jets ejecutivos y helicópteros según tu ruta, capacidad y perfil de misión.",
         },
+        experiences: {
+          title: "Experiencias de Viaje Privado | Sky Group Aviation",
+          description: "Villas de lujo, yates, transporte ejecutivo y concierge coordinados junto con tu vuelo privado en México.",
+        },
         reserva: {
           title:
             "Cotiza tu Vuelo Privado | Sky Group Aviation",
@@ -110,7 +119,11 @@ export const LOCALE_CONFIG = {
       home: "Home",
       requestFlight: "Quote Flight",
       fleet: "Fleet",
+      experiences: "Experiences",
       pricing: "Pricing",
+      flights: "Flights",
+      destinations: "Destinations",
+      about: "About",
       contact: "Contact",
     },
     layout: {
@@ -174,6 +187,10 @@ export const LOCALE_CONFIG = {
           description:
             "Explore available aircraft options for private flights, executive jets and helicopters based on route, capacity and mission profile.",
         },
+        experiences: {
+          title: "Private Travel Experiences | Sky Group Aviation",
+          description: "Luxury villas, yachts, executive transportation and concierge services coordinated with your private flight in Mexico.",
+        },
         reserva: {
           title: "Quote Your Private Flight | Sky Group Aviation",
           description:
@@ -208,6 +225,7 @@ export const PAGE_SEGMENTS = {
   fleet: "fleet",
   reserva: "reserva",
   airports: "airports",
+  experiences: "experiencias",
   lookbooks: "biblioteca",
   thankYou: "thank-you",
 };
@@ -282,10 +300,12 @@ export function buildAbsoluteUrl(path) {
 }
 
 export function getSeoForRoute(route) {
-  const locale = normalizeLocale(route.meta?.locale);
+  const locale = normalizeLocale(route.meta?.locale ?? route.params?.locale);
   const pageKey = route.meta?.pageKey ?? "home";
   const localeConfig = getLocaleConfig(locale);
-  const path = getLocalizedPath(locale, pageKey);
+  const path = route.params?.slug
+    ? `/${locale}/experiencias/${route.params.slug}`
+    : getLocalizedPath(locale, pageKey);
   const pageMeta = localeConfig.seo.pageMeta?.[pageKey];
   const shouldIndex = pageKey !== "thankYou";
 
@@ -301,7 +321,11 @@ export function getSeoForRoute(route) {
 
   const alternates = SUPPORTED_LOCALES.map((supportedLocale) => ({
     hreflang: getLocaleConfig(supportedLocale).hreflang,
-    href: buildAbsoluteUrl(getLocalizedPath(supportedLocale, pageKey)),
+    href: buildAbsoluteUrl(
+      route.params?.slug
+        ? `/${supportedLocale}/experiencias/${route.params.slug}`
+        : getLocalizedPath(supportedLocale, pageKey),
+    ),
   }));
 
   alternates.push({

@@ -11,8 +11,8 @@
         <RouterLink :to="localizedPath('fleet')" class="nav-link">
           {{ copy.fleet }}
         </RouterLink>
-        <RouterLink :to="localizedPath('pricing')" class="nav-link">
-          {{ copy.pricing }}
+        <RouterLink :to="localizedPath('experiences')" class="nav-link">
+          {{ copy.experiences }}
         </RouterLink>
       </nav>
 
@@ -62,8 +62,8 @@
     <RouterLink :to="localizedPath('fleet')" @click="closeMenu">
       {{ copy.fleet }}
     </RouterLink>
-    <RouterLink :to="localizedPath('pricing')" @click="closeMenu">
-      {{ copy.pricing }}
+    <RouterLink :to="localizedPath('experiences')" @click="closeMenu">
+      {{ copy.experiences }}
     </RouterLink>
     <RouterLink :to="localizedPath('contact')" @click="closeMenu">
       {{ copy.contact }}

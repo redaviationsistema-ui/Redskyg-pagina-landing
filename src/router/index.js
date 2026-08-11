@@ -15,6 +15,8 @@ import Reserva from "../views/Reserva.vue";
 import Airports from "../views/Airports.vue";
 import ThankYou from "../views/ThankYou.vue";
 import LookbooksView from "../views/LookbooksView.vue";
+import Experiences from "../views/Experiences.vue";
+import VillaDetail from "../views/VillaDetail.vue";
 import { DEFAULT_LOCALE, detectPreferredLocale } from "../i18n/site";
 
 const routeDefinitions = [
@@ -40,6 +42,7 @@ const routeDefinitions = [
   },
   { pageKey: "reserva", path: "reserva", component: Reserva },
   { pageKey: "airports", path: "airports", component: Airports },
+  { pageKey: "experiences", path: "experiencias", component: Experiences },
   {
     pageKey: "lookbooks",
     path: "biblioteca",
@@ -84,6 +87,12 @@ const routes = [
   },
   ...createLocalizedRoutes("es-mx"),
   ...createLocalizedRoutes("en-us"),
+  {
+    path: "/:locale(es-mx|en-us)/experiencias/:slug",
+    name: "villa-detail",
+    component: VillaDetail,
+    meta: { pageKey: "experiences" },
+  },
   {
     path: "/about",
     redirect: `/${DEFAULT_LOCALE}/about`,
@@ -131,6 +140,10 @@ const routes = [
   {
     path: "/biblioteca",
     redirect: `/${DEFAULT_LOCALE}/biblioteca`,
+  },
+  {
+    path: "/experiencias",
+    redirect: `/${DEFAULT_LOCALE}/experiencias`,
   },
   {
     path: "/:pathMatch(.*)*",

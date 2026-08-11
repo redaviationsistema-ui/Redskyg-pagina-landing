@@ -10,7 +10,9 @@ import {
 export function useLocalizedNavigation() {
   const route = useRoute();
 
-  const locale = computed(() => normalizeLocale(route.meta?.locale ?? DEFAULT_LOCALE));
+  const locale = computed(() =>
+    normalizeLocale(route.meta?.locale ?? route.params?.locale ?? DEFAULT_LOCALE),
+  );
   const localeConfig = computed(() => getLocaleConfig(locale.value));
   const pageKey = computed(() => route.meta?.pageKey ?? "home");
 

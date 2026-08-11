@@ -147,4 +147,20 @@
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
+  <url>
+    <loc>https://redskyg.com/landing/es-mx/experiencias</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/experiencias" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/experiencias" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/experiencias" />
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://redskyg.com/landing/en-us/experiencias</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://redskyg.com/landing/es-mx/experiencias" />
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://redskyg.com/landing/en-us/experiencias" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://redskyg.com/landing/es-mx/experiencias" />
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>

@@ -89,6 +89,7 @@
         </div>
       </section>
 
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <section class="section fleet-preview">
         <div class="fleet-showcase__background" aria-hidden="true">
           <img
@@ -217,6 +218,7 @@
         </div>
       </section>
 
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <section class="section flow" aria-labelledby="flow-title">
         <img
           class="flow-aircraft"
@@ -244,9 +246,19 @@
               <span class="step-number">0{{ index + 1 }}</span>
               <div class="step-icon" aria-hidden="true">
                 <span class="step-icon-orbit"></span>
-                <FilePenLine v-if="index === 0" />
-                <MailOpen v-else-if="index === 1" />
-                <PlaneTakeoff v-else />
+                <span v-if="index === 0" class="writing-animation">
+                  <File class="writing-animation__paper" />
+                  <PenLine class="writing-animation__pen" />
+                  <i class="writing-animation__stroke"></i>
+                </span>
+                <span v-else-if="index === 1" class="mail-animation">
+                  <Mail class="mail-animation__closed" />
+                  <MailOpen class="mail-animation__open" />
+                </span>
+                <span v-else class="plane-takeoff-animation">
+                  <Plane class="plane-takeoff-animation__aircraft" />
+                  <i class="plane-takeoff-animation__runway"></i>
+                </span>
               </div>
               <div class="step-copy">
                 <h3>{{ item.title }}</h3>
@@ -261,6 +273,7 @@
         </div>
       </section>
 
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <section class="section narrative">
         <div class="shell narrative-grid">
           <div class="section-copy premium-heading reveal">
@@ -285,6 +298,26 @@
         </div>
       </section>
 
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
+      <section class="section trust">
+        <div class="shell trust-grid trust-grid--copy-only">
+          <div class="section-copy premium-heading reveal">
+            <span class="eyebrow">{{ content.trust.eyebrow }}</span>
+            <span class="section-emblem" aria-hidden="true"><Plane /></span>
+            <h2>{{ content.trust.title }}</h2>
+            <p>{{ content.trust.description }}</p>
+
+            <div class="trust-lines">
+              <div v-for="item in content.trust.items" :key="item">
+                <ShieldCheck aria-hidden="true" />
+                <span>{{ item }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <section
         class="section experience"
         :class="{ 'experience--video': content.experience.videoUrl || content.experience.video }"
@@ -327,6 +360,7 @@
         </div>
       </section>
 
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <section class="section catering" aria-labelledby="catering-title">
         <div class="shell catering-shell">
           <header class="premium-heading catering-heading reveal">
@@ -395,35 +429,13 @@
         </div>
       </section>
 
-      <section class="section trust">
-        <div class="shell trust-grid">
-          <div class="trust-mark reveal">
-            <img
-              :src="assetUrl(content.trust.badge)"
-              :alt="content.trust.badgeAlt"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
+      <HomeVillasSection />
 
-          <div class="section-copy premium-heading reveal">
-            <span class="eyebrow">{{ content.trust.eyebrow }}</span>
-            <span class="section-emblem" aria-hidden="true"><Plane /></span>
-            <h2>{{ content.trust.title }}</h2>
-            <p>{{ content.trust.description }}</p>
-
-            <div class="trust-lines">
-              <div v-for="item in content.trust.items" :key="item">
-                <ShieldCheck aria-hidden="true" />
-                <span>{{ item }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <div v-if="showLookbooksSection" class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <LookbooksView v-if="showLookbooksSection" embedded />
 
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <section class="final-cta">
         <div class="shell final-grid reveal">
           <div class="premium-heading premium-heading--dark">
@@ -461,16 +473,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
-  FilePenLine,
+  File,
   Gauge,
   Globe2,
   Handshake,
   Helicopter,
   MapPin,
   MessageCircle,
+  Mail,
   MailOpen,
   Plane,
   PlaneTakeoff,
+  PenLine,
   Route,
   ShieldCheck,
   Sparkles,
@@ -478,6 +492,7 @@ import {
 } from "lucide-vue-next";
 import MainLayout from "../layouts/MainLayout.vue";
 import LookbooksView from "../views/LookbooksView.vue";
+import HomeVillasSection from "./HomeVillasSection.vue";
 import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
 
 const props = defineProps({
@@ -713,6 +728,57 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.section-divider {
+  position: relative;
+  z-index: 8;
+  width: min(1540px, calc(100% - 32px));
+  height: 34px;
+  margin: -17px auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 32%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.section-divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c9a35a 8%, #c9a35a 92%, transparent);
+}
+
+.section-divider i {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #c9a35a;
+  border-radius: 50%;
+  background: #f8f7f4;
+  box-shadow: 0 0 0 3px rgba(201, 163, 90, 0.12);
+}
+
+.section-divider i:nth-child(2) {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .section-divider {
+    width: calc(100% - 20px);
+    height: 24px;
+    margin: -12px auto;
+  }
+
+  .section-divider i {
+    width: 9px;
+    height: 9px;
+  }
+}
+
 .home-page {
   --ink: #0b1220;
   --navy: #071624;
@@ -839,9 +905,12 @@ onBeforeUnmount(() => {
 .hero h1 {
   margin: 0.8rem 0 0.9rem;
   color: #ffffff;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(2.9rem, 6.1vw, 5.8rem);
+  font-weight: 500;
   line-height: 0.96;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
   max-width: 860px;
   text-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
@@ -1528,6 +1597,7 @@ onBeforeUnmount(() => {
   height: 37px;
   stroke-width: 1.5;
   transition: transform 300ms ease;
+  animation: stepIconFloat 3.2s ease-in-out infinite;
 }
 
 .step-icon-orbit {
@@ -1538,6 +1608,164 @@ onBeforeUnmount(() => {
   border-right-color: #c79a3b;
   border-radius: 50%;
   transform: rotate(24deg);
+  animation: stepOrbitRotate 7s linear infinite;
+}
+
+.flow-step:nth-child(2) .step-icon svg { animation-delay: -1.05s; }
+.flow-step:nth-child(3) .step-icon svg { animation-delay: -2.1s; }
+.flow-step:nth-child(2) .step-icon-orbit { animation-delay: -2.3s; }
+.flow-step:nth-child(3) .step-icon-orbit { animation-delay: -4.6s; }
+
+.flow-step:first-child .step-icon svg {
+  transform-origin: 70% 72%;
+  animation: penWriting 2.8s ease-in-out infinite;
+}
+
+.writing-animation {
+  position: relative;
+  display: block;
+  width: 48px;
+  height: 48px;
+}
+
+.step-icon .writing-animation__paper {
+  position: absolute;
+  inset: 2px auto auto 1px;
+  width: 39px;
+  height: 43px;
+  animation: none !important;
+}
+
+.step-icon .writing-animation__pen {
+  position: absolute;
+  z-index: 2;
+  right: -1px;
+  bottom: 2px;
+  width: 26px;
+  height: 26px;
+  transform-origin: 85% 85%;
+  animation: pencilWrites 2.6s ease-in-out infinite !important;
+}
+
+.writing-animation__stroke {
+  position: absolute;
+  left: 11px;
+  bottom: 9px;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: left center;
+  animation: writtenStroke 2.6s ease-in-out infinite;
+}
+
+.flow-step:nth-child(2) .step-icon .mail-animation {
+  position: relative;
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+
+.flow-step:nth-child(2) .step-icon .mail-animation svg {
+  position: absolute;
+  inset: 0;
+  width: 40px;
+  height: 40px;
+  animation-duration: 3.4s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.mail-animation__closed { animation-name: mailClosedState !important; }
+.mail-animation__open { animation-name: mailOpenState !important; }
+
+.plane-takeoff-animation {
+  position: relative;
+  display: block;
+  width: 48px;
+  height: 42px;
+}
+
+.step-icon .plane-takeoff-animation__aircraft {
+  position: absolute;
+  z-index: 2;
+  top: 1px;
+  left: 5px;
+  width: 34px;
+  height: 34px;
+  animation: aircraftTakeoff 3.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+
+.plane-takeoff-animation__runway {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+@keyframes stepIconFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  45% { transform: translateY(-5px) rotate(-2deg); }
+  70% { transform: translateY(-2px) rotate(1deg); }
+}
+
+@keyframes stepOrbitRotate {
+  from { transform: rotate(24deg); }
+  to { transform: rotate(384deg); }
+}
+
+@keyframes penWriting {
+  0%, 18%, 100% { transform: translate(0, 0) rotate(0deg); }
+  28% { transform: translate(3px, -2px) rotate(-4deg); }
+  38% { transform: translate(-2px, 2px) rotate(3deg); }
+  48% { transform: translate(4px, 1px) rotate(-3deg); }
+  58% { transform: translate(-1px, 4px) rotate(4deg); }
+  68% { transform: translate(3px, 3px) rotate(-2deg); }
+  78% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes pencilWrites {
+  0%, 18%, 100% { transform: translate(1px, 1px) rotate(-5deg); }
+  32% { transform: translate(-7px, -2px) rotate(-10deg); }
+  46% { transform: translate(-1px, 1px) rotate(-4deg); }
+  60% { transform: translate(-8px, 3px) rotate(-11deg); }
+  74%, 84% { transform: translate(0, 0) rotate(-5deg); }
+}
+
+@keyframes writtenStroke {
+  0%, 24%, 100% { opacity: 0.25; transform: scaleX(0.08); }
+  68%, 84% { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes mailClosedState {
+  0%, 28%, 100% { opacity: 1; transform: translateY(0) scale(1); }
+  40%, 82% { opacity: 0; transform: translateY(3px) scale(0.9); }
+}
+
+@keyframes mailOpenState {
+  0%, 28%, 100% { opacity: 0; transform: translateY(4px) scale(0.88); }
+  42%, 72% { opacity: 1; transform: translateY(-2px) scale(1.06); }
+  82% { opacity: 0; transform: translateY(0) scale(0.96); }
+}
+
+@keyframes aircraftTakeoff {
+  0%, 14% { opacity: 1; transform: translate(-8px, 7px) rotate(-10deg) scale(0.9); }
+  52%, 72% { opacity: 1; transform: translate(8px, -8px) rotate(-18deg) scale(1.03); }
+  82% { opacity: 0; transform: translate(16px, -15px) rotate(-18deg) scale(0.96); }
+  83% { opacity: 0; transform: translate(-10px, 8px) rotate(-10deg) scale(0.88); }
+  100% { opacity: 1; transform: translate(-8px, 7px) rotate(-10deg) scale(0.9); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-icon svg,
+  .step-icon-orbit,
+  .writing-animation__stroke {
+    animation: none !important;
+  }
 }
 
 .step-copy h3 {
@@ -2110,6 +2338,11 @@ onBeforeUnmount(() => {
 
 .trust-grid {
   grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
+}
+
+.trust-grid--copy-only {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 980px;
 }
 
 .trust-mark {
