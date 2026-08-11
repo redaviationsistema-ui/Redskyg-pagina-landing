@@ -12,7 +12,7 @@
           <div class="detail-hero__overlay"></div>
           <div class="detail-shell detail-hero__content">
             <RouterLink :to="localizedPath('experiences')" class="detail-back"><ArrowLeft /> {{copy.allVillas}}</RouterLink>
-            <div><span><MapPin />{{ villa.destination }}, {{copy.mexico}}</span><h1>{{ villa.name }}</h1><a :href="whatsappHref" target="_blank" rel="noreferrer" class="detail-button detail-button--gold">{{copy.availability}} <ArrowUpRight /></a></div>
+            <div><span><MapPin />{{ heroLocationLabel }}</span><h1>{{ villa.name }}</h1><a :href="whatsappHref" target="_blank" rel="noreferrer" class="detail-button detail-button--gold">{{copy.availability}} <ArrowUpRight /></a></div>
           </div>
         </section>
 
@@ -31,7 +31,7 @@
 
         <section class="detail-shell amenities"><header><span class="detail-kicker">{{copy.amenities}}</span><h2>{{copy.amenitiesTitle}}</h2></header><div class="amenity-grid"><span v-for="item in localizedAmenities" :key="item"><Check />{{item}}</span></div></section>
 
-        <section class="location"><div class="detail-shell location-grid"><div><span class="detail-kicker">{{copy.location}}</span><h2>{{villa.destination}}, {{ regionLabel }}</h2><a class="detail-button" :href="mapHref" target="_blank" rel="noreferrer">{{copy.viewLocation}} <ArrowUpRight/></a></div><div class="map-card"><iframe :src="mapEmbedHref" :title="`${copy.location}: ${villa.destination}`" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><a :href="mapHref" target="_blank" rel="noreferrer">{{openMapsLabel}} <ArrowUpRight/></a></div></div></section>
+        <section class="location" :style="locationSectionStyle"><div class="detail-shell location-grid"><div><span class="detail-kicker">{{copy.location}}</span><h2>{{locationHeading}}</h2><a class="detail-button" :href="mapHref" target="_blank" rel="noreferrer">{{copy.viewLocation}} <ArrowUpRight/></a></div><div class="map-card"><iframe :src="mapEmbedHref" :title="`${copy.location}: ${locationHeading}`" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><a :href="mapHref" target="_blank" rel="noreferrer">{{openMapsLabel}} <ArrowUpRight/></a></div></div></section>
 
         <section class="detail-commercial"><div class="commercial-photo"><img src="/images/Home/CATERIING/experiencia.png" alt="Sky Group private aviation concierge" loading="lazy"></div>
           <div class="detail-shell commercial-grid">
@@ -44,7 +44,7 @@
 
         <section class="planning detail-shell"><header><span class="detail-kicker">Sky Group</span><h2>{{copy.planTitle}}</h2></header><div class="planning-grid"><article><Plane/><div><h3>{{copy.privateFlight}}</h3><p>{{copy.flightText}}</p><RouterLink :to="localizedPath('reserva')">{{copy.quoteFlight}} <ArrowRight/></RouterLink></div></article><article><House/><div><h3>{{copy.exclusiveStay}}</h3><p>{{copy.stayText}}</p><a :href="whatsappHref" target="_blank">{{copy.availability}} <ArrowRight/></a></div></article></div></section>
 
-        <transition name="bar"><div v-if="showBookingBar" class="booking-bar"><div><small>{{villa.destination}}</small><strong>{{villa.name}}</strong></div><span>{{copy.conciergeRate}}</span><a :href="whatsappHref" target="_blank">{{copy.availability}}</a></div></transition>
+        <transition name="bar"><div v-if="showBookingBar" class="booking-bar"><div><small>{{bookingLocationLabel}}</small><strong>{{villa.name}}</strong></div><span>{{copy.conciergeRate}}</span><a :href="whatsappHref" target="_blank">{{copy.availability}}</a></div></transition>
 
         <a :href="whatsappHref" target="_blank" rel="noreferrer" class="mobile-sticky"><MessageCircle /> {{copy.checkAvailability}}</a>
       </template>
@@ -82,11 +82,17 @@ const translatedValue=(dictionary,value)=>{const match=Object.entries(dictionary
 const localBadge=computed(()=>locale.value==='en-us'?translatedValue(badgeTranslations,villa.value?.badge):villa.value?.badge);
 const openMapsLabel=computed(()=>locale.value==='es-mx'?'Abrir en Google Maps':'Open in Google Maps');
 const regionLabel=computed(()=>['Puerto Vallarta'].includes(villa.value?.destination)?'Jalisco':'Quintana Roo');
-const mapQuery=computed(()=>`${villa.value?.destination}, ${regionLabel.value}, Mexico`);
+const destinationLabel=computed(()=>String(villa.value?.destination||'').trim());
+const locationHeading=computed(()=>destinationLabel.value?[destinationLabel.value,regionLabel.value].join(', '):regionLabel.value);
+const heroLocationLabel=computed(()=>destinationLabel.value?[destinationLabel.value,copy.value.mexico].join(', '):copy.value.mexico);
+const bookingLocationLabel=computed(()=>destinationLabel.value||regionLabel.value);
+const locationImageUrl='https://commons.wikimedia.org/wiki/Special:Redirect/file/Quintana_Roo,_Mexico_(Unsplash).jpg';
+const locationSectionStyle=computed(()=>regionLabel.value==='Quintana Roo'?{backgroundImage:`linear-gradient(rgba(7,23,36,.84), rgba(7,23,36,.84)), url("${locationImageUrl}")`,backgroundPosition:'center',backgroundSize:'cover',backgroundRepeat:'no-repeat'}:{});
+const mapQuery=computed(()=>destinationLabel.value?[destinationLabel.value,regionLabel.value,'Mexico'].join(', '):[regionLabel.value,'Mexico'].join(', '));
 const mapHref=computed(()=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery.value)}`);
 const mapEmbedHref=computed(()=>`https://www.google.com/maps?q=${encodeURIComponent(mapQuery.value)}&z=12&output=embed`);
 const detailPath=slug=>`/${locale.value}/experiencias/${slug}`;
-const whatsappHref = computed(() => `https://wa.me/525586186576?text=${encodeURIComponent(locale.value==='es-mx'?`Hola, estoy interesado en ${villa.value?.name} en ${villa.value?.destination}. ¿Me pueden compartir disponibilidad?`:`Hello, I am interested in ${villa.value?.name} in ${villa.value?.destination}. Could you share availability?`)}`);
+const whatsappHref = computed(() => `https://wa.me/525586186576?text=${encodeURIComponent(locale.value==='es-mx'?`Hola, estoy interesado en ${villa.value?.name}${bookingLocationLabel.value ? ` en ${bookingLocationLabel.value}` : ''}. ¿Me pueden compartir disponibilidad?`:`Hello, I am interested in ${villa.value?.name}${bookingLocationLabel.value ? ` in ${bookingLocationLabel.value}` : ''}. Could you share availability?`)}`);
 const openLightbox = (index) => { activeImage.value = index; lightboxOpen.value = true; };
 const closeLightbox = () => { lightboxOpen.value = false; };
 const previous = () => { activeImage.value = (activeImage.value - 1 + villa.value.images.length) % villa.value.images.length; };

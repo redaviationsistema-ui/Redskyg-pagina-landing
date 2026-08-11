@@ -220,13 +220,6 @@
 
       <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <section class="section flow" aria-labelledby="flow-title">
-        <img
-          class="flow-aircraft"
-          :src="assetUrl('images/Home/home18.jpg')"
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
         <div class="shell flow-shell">
           <header class="section-copy section-copy--center flow-heading reveal">
             <span class="eyebrow">{{ content.flow.eyebrow }}</span>
@@ -1451,19 +1444,6 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: -1;
   background: linear-gradient(90deg, #ffffff 0%, rgba(255, 255, 255, 0.96) 45%, rgba(255, 255, 255, 0.38) 100%);
-  pointer-events: none;
-}
-
-.flow-aircraft {
-  position: absolute;
-  z-index: -2;
-  top: 0;
-  right: 0;
-  width: min(58vw, 980px);
-  height: 100%;
-  object-fit: cover;
-  object-position: 56% center;
-  opacity: 0.13;
   pointer-events: none;
 }
 
@@ -2720,7 +2700,6 @@ onBeforeUnmount(() => {
 
   .flow { padding: 78px 0; }
   .flow::after { background: rgba(250, 251, 252, 0.94); }
-  .flow-aircraft { display: none; }
   .flow-shell { width: min(100% - 40px, 1200px); }
   .flow-heading h2 { font-size: clamp(2.25rem, 10.5vw, 2.625rem); line-height: 1.02; }
   .flow-steps { grid-template-columns: 1fr; gap: 24px; margin-top: 48px; padding-bottom: 0; }
