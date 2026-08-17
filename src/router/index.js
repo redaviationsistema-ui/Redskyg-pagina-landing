@@ -16,6 +16,8 @@ import Airports from "../views/Airports.vue";
 import ThankYou from "../views/ThankYou.vue";
 import LookbooksView from "../views/LookbooksView.vue";
 import Experiences from "../views/Experiences.vue";
+import SurveyView from "../views/SurveyView.vue";
+import PrivacyNotice from "../views/PrivacyNotice.vue";
 import VillaDetail from "../views/VillaDetail.vue";
 import { DEFAULT_LOCALE, detectPreferredLocale } from "../i18n/site";
 
@@ -49,6 +51,13 @@ const routeDefinitions = [
     component: LookbooksView,
     aliases: ["lookbooks"],
   },
+  {
+    pageKey: "privacy",
+    path: "aviso-de-privacidad",
+    component: PrivacyNotice,
+    aliases: ["privacy-notice"],
+  },
+  { pageKey: "survey", path: "encuesta", component: SurveyView },
   { pageKey: "thankYou", path: "thank-you", component: ThankYou },
 ];
 
@@ -144,6 +153,21 @@ const routes = [
   {
     path: "/experiencias",
     redirect: `/${DEFAULT_LOCALE}/experiencias`,
+  },
+  {
+    path: "/aviso-de-privacidad",
+    redirect: `/${DEFAULT_LOCALE}/aviso-de-privacidad`,
+  },
+  {
+    path: "/encuesta",
+    redirect: (to) => ({
+      path: `/${detectPreferredLocale()}/encuesta`,
+      query: to.query,
+    }),
+  },
+  {
+    path: "/privacy-notice",
+    redirect: `/${DEFAULT_LOCALE}/privacy-notice`,
   },
   {
     path: "/:pathMatch(.*)*",

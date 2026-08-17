@@ -39,6 +39,8 @@ export const LOCALE_CONFIG = {
         "Suscríbete para recibir noticias, actualizaciones e información exclusiva sobre los servicios de aviación privada de Sky Group.",
       emailPlaceholder: "Correo electrónico",
       subscribe: "Suscribirme",
+      privacyNotice: "Aviso de privacidad",
+      developerCreditPrefix: "Diseño y desarrollo tecnológico por",
     },
     seo: {
       siteName: "Sky Group Aviation",
@@ -103,9 +105,19 @@ export const LOCALE_CONFIG = {
           description:
             "Explora fichas técnicas, eBooks y documentación de aeronaves privadas para evaluar opciones según el tipo de misión.",
         },
+        privacy: {
+          title: "Aviso de Privacidad | Sky Group Aviation",
+          description:
+            "Consulta el aviso de privacidad de Sky Group Aviation aplicable a pasajeros y servicios de aviación privada.",
+        },
         thankYou: {
           title: "Gracias por tu Solicitud | Sky Group Aviation",
           description: "Confirmación de solicitud enviada a Sky Group Aviation.",
+        },
+        survey: {
+          title: "Encuesta de Experiencia | Sky Group Aviation",
+          description:
+            "Comparte tu experiencia al solicitar y gestionar vuelos privados con Sky Group Aviation.",
         },
       },
     },
@@ -145,6 +157,8 @@ export const LOCALE_CONFIG = {
         "Subscribe to receive news, updates, and exclusive information about Sky Group private aviation services.",
       emailPlaceholder: "Email address",
       subscribe: "Subscribe",
+      privacyNotice: "Privacy Notice",
+      developerCreditPrefix: "Technology design and development by",
     },
     seo: {
       siteName: "Sky Group Aviation",
@@ -206,9 +220,19 @@ export const LOCALE_CONFIG = {
           description:
             "Browse aircraft brochures, technical PDFs and private aviation guides to evaluate mission-fit options.",
         },
+        privacy: {
+          title: "Privacy Notice | Sky Group Aviation",
+          description:
+            "Review Sky Group Aviation's privacy notice for passengers and private aviation services.",
+        },
         thankYou: {
           title: "Thank You | Sky Group Aviation",
           description: "Confirmation page for your private flight request.",
+        },
+        survey: {
+          title: "Experience Survey | Sky Group Aviation",
+          description:
+            "Share your experience requesting and managing private flights with Sky Group Aviation.",
         },
       },
     },
@@ -227,7 +251,9 @@ export const PAGE_SEGMENTS = {
   airports: "airports",
   experiences: "experiencias",
   lookbooks: "biblioteca",
+  privacy: "aviso-de-privacidad",
   thankYou: "thank-you",
+  survey: "encuesta",
 };
 
 export function normalizeLocale(locale) {
@@ -305,7 +331,9 @@ export function getSeoForRoute(route) {
   const localeConfig = getLocaleConfig(locale);
   const path = route.params?.slug
     ? `/${locale}/experiencias/${route.params.slug}`
-    : getLocalizedPath(locale, pageKey);
+    : pageKey === "survey"
+      ? "/encuesta"
+      : getLocalizedPath(locale, pageKey);
   const pageMeta = localeConfig.seo.pageMeta?.[pageKey];
   const shouldIndex = pageKey !== "thankYou";
 
@@ -324,6 +352,8 @@ export function getSeoForRoute(route) {
     href: buildAbsoluteUrl(
       route.params?.slug
         ? `/${supportedLocale}/experiencias/${route.params.slug}`
+        : pageKey === "survey"
+          ? "/encuesta"
         : getLocalizedPath(supportedLocale, pageKey),
     ),
   }));

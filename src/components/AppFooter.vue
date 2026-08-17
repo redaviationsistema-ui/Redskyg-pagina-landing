@@ -8,7 +8,12 @@
           </div>
 
           <p>{{ copy.description }}</p>
-          <small>{{ copy.rights }}</small>
+          <div class="footer-legal">
+            <small>{{ copy.rights }}</small>
+            <RouterLink :to="localizedPath('privacy')" class="footer-legal__link">
+              {{ copy.privacyNotice }}
+            </RouterLink>
+          </div>
         </div>
 
         <div class="footer-contact">
@@ -114,7 +119,7 @@ import { computed } from "vue";
 import { MessageCircle } from "lucide-vue-next";
 import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
 
-const { localeConfig } = useLocalizedNavigation();
+const { localeConfig, localizedPath } = useLocalizedNavigation();
 const copy = computed(() => localeConfig.value.footer);
 const layoutCopy = computed(
   () =>
@@ -200,6 +205,27 @@ const handlePhone = (number) => {
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+.footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.8rem;
+}
+
+.footer-legal__link {
+  color: var(--footer-accent);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: none;
+  transition: color 0.22s ease;
+}
+
+.footer-legal__link:hover {
+  color: #f1cb83;
 }
 
 .footer-contact {

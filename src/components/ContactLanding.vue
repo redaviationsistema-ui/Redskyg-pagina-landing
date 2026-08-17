@@ -75,6 +75,12 @@
           </div>
         </div>
       </section>
+
+      <section class="contact-survey">
+        <div class="contact-shell reveal">
+          <SurveyCTA variant="dark" source="contacto" />
+        </div>
+      </section>
     </div>
   </MainLayout>
 
@@ -94,6 +100,7 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 import axios from "axios";
 import { CheckCircle2, Send } from "lucide-vue-next";
 import MainLayout from "../layouts/MainLayout.vue";
+import SurveyCTA from "./SurveyCTA.vue";
 
 const props = defineProps({
   content: {
@@ -457,6 +464,11 @@ onBeforeUnmount(() => {
 .contact-strip {
   padding: 58px 0;
   background: var(--contact-ink);
+}
+
+.contact-survey {
+  padding: 0 0 72px;
+  background: var(--contact-navy);
 }
 
 .strip-grid {

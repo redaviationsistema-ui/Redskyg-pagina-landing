@@ -425,6 +425,13 @@
       <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <HomeVillasSection />
 
+      <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
+      <section class="section survey-entry">
+        <div class="shell reveal">
+          <SurveyCTA variant="light" source="home" />
+        </div>
+      </section>
+
       <div v-if="showLookbooksSection" class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <LookbooksView v-if="showLookbooksSection" embedded />
 
@@ -486,6 +493,7 @@ import {
 import MainLayout from "../layouts/MainLayout.vue";
 import LookbooksView from "../views/LookbooksView.vue";
 import HomeVillasSection from "./HomeVillasSection.vue";
+import SurveyCTA from "./SurveyCTA.vue";
 import { useLocalizedNavigation } from "../composables/useLocalizedNavigation";
 
 const props = defineProps({
@@ -770,6 +778,11 @@ onBeforeUnmount(() => {
     width: 9px;
     height: 9px;
   }
+
+  .survey-entry {
+    padding-top: 62px;
+    padding-bottom: 62px;
+  }
 }
 
 .home-page {
@@ -795,6 +808,14 @@ onBeforeUnmount(() => {
 .section {
   padding: 108px 0;
   scroll-margin-top: 90px;
+}
+
+.survey-entry {
+  padding-top: 82px;
+  padding-bottom: 82px;
+  background:
+    radial-gradient(circle at top left, rgba(208, 172, 103, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(246, 248, 251, 0.85), rgba(255, 255, 255, 1));
 }
 
 .scroll-progress {
