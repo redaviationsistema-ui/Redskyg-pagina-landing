@@ -155,10 +155,6 @@
                       />
                     </label>
                   </div>
-
-                  <button class="survey-skip" type="button" @click="skipOptionalLead">
-                    {{ copy.optional.skip }}
-                  </button>
                 </div>
               </div>
 
@@ -257,9 +253,9 @@ const pendingEmailPayload = ref(null);
 const surveyCopyByLocale = {
   "es-mx": {
     eyebrow: "ENCUESTA DE EXPERIENCIA",
-    title: "Ayudanos a disenar una mejor forma de contratar vuelos privados.",
+    title: "Ayúdanos a diseñar una mejor forma de contratar vuelos privados.",
     description:
-      "Tus respuestas nos ayudaran a entender como vives hoy el proceso de solicitud, cotizacion y reservacion.",
+      "Tus respuestas nos ayudarán a entender cómo vives hoy el proceso de solicitud, cotización y reservación.",
     actions: {
       back: "Volver",
       next: "Continuar",
@@ -269,52 +265,51 @@ const surveyCopyByLocale = {
     optional: {
       eyebrow: "ESCALA",
       title:
-        "Estamos desarrollando una nueva herramienta para simplificar la contratacion y gestion de vuelos privados.",
+        "Estamos desarrollando una nueva herramienta para simplificar la contratación y gestión de vuelos privados.",
       description:
-        "Si te interesa conocerla o participar en una prueba inicial, dejanos tus datos. Es completamente opcional.",
+        "Si te interesa conocerla o participar en una prueba inicial, déjanos tus datos. Es completamente opcional.",
       name: "Nombre",
       contact: "Correo o WhatsApp",
       namePlaceholder: "Tu nombre",
-      contactPlaceholder: "Correo electronico o numero de WhatsApp",
-      skip: "OMITIR",
+      contactPlaceholder: "Correo electrónico o número de WhatsApp",
     },
     success: {
       eyebrow: "VUELO REGISTRADO",
       title: "Gracias por compartir tu experiencia",
       description:
-        "Tus respuestas nos ayudan a disenar una mejor forma de contratar y gestionar vuelos privados con Sky Group.",
-      autoReturn: "Te regresaremos al inicio automaticamente.",
+        "Tus respuestas nos ayudan a diseñar una mejor forma de contratar y gestionar vuelos privados con Sky Group.",
+      autoReturn: "Te regresaremos al inicio automáticamente.",
       cta: "VOLVER AL INICIO",
     },
     errors: {
       required: "Selecciona una respuesta para continuar.",
-      requiredMultiple: "Selecciona al menos una opcion para continuar.",
+      requiredMultiple: "Selecciona al menos una opción para continuar.",
       submit: "No pudimos enviar tus respuestas. Por favor, intenta nuevamente.",
       database: "No fue posible guardar tus respuestas.",
       email:
-        "Las respuestas se guardaron, pero no fue posible enviar la notificacion por correo. Intenta nuevamente.",
+        "Las respuestas se guardaron, pero no fue posible enviar la notificación por correo. Intenta nuevamente.",
     },
     steps: {
       request: "Solicitud",
-      satisfaction: "Satisfaccion",
-      friction: "Friccion",
+      satisfaction: "Satisfacción",
+      friction: "Fricción",
       tools: "Herramientas",
-      adoption: "Adopcion",
+      adoption: "Adopción",
       comment: "Comentario",
     },
     questions: {
       q1: {
-        question: "Como solicitas normalmente tus vuelos privados?",
+        question: "¿Cómo solicitas normalmente tus vuelos privados?",
         options: [
           "WhatsApp",
           "Llamada",
-          "Correo electronico",
+          "Correo electrónico",
           "Con un asesor / ejecutivo",
-          "Combinacion de los anteriores",
+          "Combinación de los anteriores",
         ],
       },
       q2: {
-        question: "Que tan satisfecho estas con el proceso actual?",
+        question: "¿Qué tan satisfecho estás con el proceso actual?",
         options: [
           "Muy satisfecho",
           "Satisfecho",
@@ -324,46 +319,46 @@ const surveyCopyByLocale = {
         ],
       },
       q3: {
-        question: "Que parte del proceso te gustaria que fuera mas sencilla o rapida?",
-        helper: "Puedes seleccionar mas de una opcion.",
+        question: "¿Qué parte del proceso te gustaría que fuera más sencilla o rápida?",
+        helper: "Puedes seleccionar más de una opción.",
         options: [
-          "Solicitar una cotizacion",
+          "Solicitar una cotización",
           "Consultar disponibilidad",
           "Comparar opciones",
-          "Confirmar una reservacion",
+          "Confirmar una reservación",
           "Realizar el pago",
-          "Recibir informacion y documentacion",
+          "Recibir información y documentación",
           "Todo el proceso funciona bien actualmente",
         ],
       },
       q4: {
         question:
-          "Si pudieras realizar parte del proceso desde una aplicacion, que funciones te resultarian mas utiles?",
-        helper: "Seleccion multiple.",
+          "Si pudieras realizar parte del proceso desde una aplicación, ¿qué funciones te resultarían más útiles?",
+        helper: "Selección múltiple.",
         options: [
-          "Solicitar una cotizacion",
+          "Solicitar una cotización",
           "Consultar disponibilidad y opciones de aeronaves",
           "Reservar un vuelo",
           "Gestionar pasajeros y datos frecuentes",
           "Consultar mis vuelos y reservaciones",
-          "Recibir confirmaciones y documentacion",
+          "Recibir confirmaciones y documentación",
         ],
       },
       q5: {
         question:
-          "Que tan probable seria que utilizaras una aplicacion para gestionar tus vuelos privados?",
+          "¿Qué tan probable sería que utilizaras una aplicación para gestionar tus vuelos privados?",
         options: [
-          "Definitivamente la utilizaria",
-          "Probablemente la utilizaria",
+          "Definitivamente la utilizaría",
+          "Probablemente la utilizaría",
           "No estoy seguro",
           "Probablemente no",
           "Definitivamente no",
         ],
       },
       q6: {
-        question: "Que te gustaria que una aplicacion de vuelos privados hiciera por ti?",
+        question: "¿Qué te gustaría que una aplicación de vuelos privados hiciera por ti?",
         label: "Comentario final",
-        placeholder: "Cuentanos con tus palabras...",
+        placeholder: "Cuéntanos con tus palabras...",
       },
     },
   },
@@ -617,10 +612,6 @@ const goToPreviousStep = () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
-const skipOptionalLead = () => {
-  answers.leadName = "";
-  answers.leadContact = "";
-};
 
 const buildSurveyKey = () =>
   JSON.stringify({

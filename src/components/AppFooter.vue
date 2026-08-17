@@ -41,7 +41,6 @@
               <h4>{{ copy.mail }}</h4>
 
               <a href="mailto:sales@redskyg.com">sales@redskyg.com</a>
-              <a href="mailto:ventas@redskyg.com">ventas@redskyg.com</a>
             </div>
           </div>
         </div>

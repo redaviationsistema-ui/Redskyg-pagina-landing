@@ -45,19 +45,19 @@ const compact = computed(() => props.variant === "dark");
 const copy = computed(() => {
   const translations = {
     "es-mx": {
-      eyebrow: "AYUDANOS A MEJORAR",
+      eyebrow: "AYÚDANOS A MEJORAR",
       cta: "COMPARTIR MI EXPERIENCIA",
       meta: "Toma menos de 2 minutos.",
       light: {
-        title: "Como deberia ser la proxima forma de contratar un vuelo privado?",
+        title: "¿Cómo debería ser la próxima forma de contratar un vuelo privado?",
         description:
-          "Queremos conocer tu experiencia al solicitar, cotizar y reservar vuelos privados. Tu opinion nos ayudara a disenar una experiencia mas simple y eficiente.",
+          "Queremos conocer tu experiencia al solicitar, cotizar y reservar vuelos privados. Tu opinión nos ayudará a diseñar una experiencia más simple y eficiente.",
       },
       dark: {
         title:
-          "Tu experiencia puede ayudarnos a disenar una mejor forma de contratar vuelos privados.",
+          "Tu experiencia puede ayudarnos a diseñar una mejor forma de contratar vuelos privados.",
         description:
-          "Cuentanos como solicitas tus vuelos hoy y que te gustaria simplificar.",
+          "Cuéntanos cómo solicitas tus vuelos hoy y qué te gustaría simplificar.",
       },
     },
     "en-us": {
