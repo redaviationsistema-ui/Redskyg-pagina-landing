@@ -1706,6 +1706,45 @@ const getReservationBounds = (routeItems) => {
   };
 };
 
+const getTripDateValue = (routeItem, type = "start") => {
+  if (!routeItem) return "";
+
+  if (type === "end") {
+    return routeItem.end_date || routeItem.start_date || "";
+  }
+
+  return routeItem.start_date || routeItem.end_date || "";
+};
+
+const getSortedTripLegs = (routeItems = []) =>
+  [...routeItems]
+    .filter((routeItem) => !routeItem?.positioning)
+    .sort((left, right) => {
+      const leftValue = getTripDateValue(left);
+      const rightValue = getTripDateValue(right);
+
+      if (!leftValue && !rightValue) return 0;
+      if (!leftValue) return 1;
+      if (!rightValue) return -1;
+
+      return new Date(leftValue) - new Date(rightValue);
+    });
+
+const getTripDateBounds = (routeItems = []) => {
+  const sortedLegs = getSortedTripLegs(routeItems);
+  const firstLeg = sortedLegs[0] || null;
+  const lastLeg = sortedLegs[sortedLegs.length - 1] || null;
+
+  return {
+    tripStartDate: getTripDateValue(firstLeg, "start") || routes.value[0]?.start_date || null,
+    tripEndDate:
+      getTripDateValue(lastLeg, "end") ||
+      routes.value[0]?.end_date ||
+      routes.value[0]?.start_date ||
+      null,
+  };
+};
+
 const findAirportForRoute = (routeItem, direction) => {
   const airportValue =
     direction === "from" ? routeItem?.fromAirport : routeItem?.toAirport;
@@ -1745,6 +1784,37 @@ const getRouteAirport = (airportName) =>
         (airportName || "").toUpperCase() ||
       airport.aeropuerto === airportName,
   );
+
+const shortenAirportName = (value = "") =>
+  String(value || "")
+    .replace(/\bInternational Airport\b/gi, "")
+    .replace(/\bAeropuerto Internacional\b/gi, "")
+    .replace(/\bInternacional\b/gi, "")
+    .replace(/\bLicenciado\b/gi, "Lic.")
+    .replace(/\bGeneral\b/gi, "Gral.")
+    .replace(/\bHermanos\b/gi, "Hnos.")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+-\s+/g, " - ")
+    .trim();
+
+const formatAirportDisplay = (airport) => {
+  if (!airport) return "-";
+
+  const airportName = shortenAirportName(airport.aeropuerto || airport.ciudad || "");
+  const airportCode = getAirportOptionValue(airport);
+
+  if (airportName && airportCode) return `${airportName} - ${airportCode}`;
+  return airportName || airportCode || "-";
+};
+
+const getRouteAirportDisplay = (routeItem, direction) => {
+  const airport = findAirportForRoute(routeItem, direction);
+  if (airport) return formatAirportDisplay(airport);
+
+  const rawCode =
+    direction === "from" ? routeItem?.fromAirport : routeItem?.toAirport;
+  return rawCode || "-";
+};
 
 const getRouteLegDistanceNm = (routeItem) => {
   if (!routeItem?.fromAirport || !routeItem?.toAirport) return null;
@@ -2573,6 +2643,7 @@ const handleConfirm = async () => {
       routes: pricedRoutes.value,
       breakdowns: pricedBreakdowns.value,
       pricingSummary: pricingSummary.value,
+      tripDates: getTripDateBounds(pricedRoutes.value),
       totals: {
         flight: flightCostTotal.value,
         customerFlight: pricingSummary.value.customer.flightCost,
@@ -2588,9 +2659,11 @@ const handleConfirm = async () => {
       },
       getAircraftName,
       getAircraftById,
+      getRouteAirportDisplay,
     });
 
     const pdfBase64 = await blobToBase64(pdfBlob);
+    const tripDates = getTripDateBounds(pricedRoutes.value);
     const pricingPayload = {
       customerFlightCost: pricingSummary.value.customer.flightCost,
       ferryFlightCost: pricingSummary.value.ferry.flightCost,
@@ -2637,6 +2710,8 @@ const handleConfirm = async () => {
           total: totalFinal.value,
           totalPrice: totalFinal.value,
           total_estimated_price: totalFinal.value,
+          trip_start_date: tripDates.tripStartDate,
+          trip_end_date: tripDates.tripEndDate,
           pdf: pdfBase64,
         }),
       },

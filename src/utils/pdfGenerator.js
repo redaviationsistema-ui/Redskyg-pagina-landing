@@ -29,6 +29,40 @@ const formatDate = (value = new Date()) => {
   return date.toISOString().split("T")[0];
 };
 
+const formatTripDate = (value) => {
+  if (!value) return "";
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+};
+
+const formatTripDateTime = (value) => {
+  if (!value) return "";
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const datePart = date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).toUpperCase();
+  const timePart = date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  return `${datePart} • ${timePart}`;
+};
+
 const formatMoney = (value = 0) =>
   `$${Number(value || 0).toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -71,18 +105,43 @@ const ensureSpace = (doc, state, neededHeight, top = 22) => {
   }
 };
 
-const drawTextPair = (doc, label, value, x, y, width = 70) => {
+const drawTextPair = (
+  doc,
+  label,
+  value,
+  x,
+  y,
+  width = 70,
+  {
+    labelSize = 7.1,
+    valueSize = 8.4,
+    valueOffset = 3.5,
+  } = {},
+) => {
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
+  doc.setFontSize(labelSize);
   doc.setTextColor(...COLORS.steel);
   doc.text(label.toUpperCase(), x, y);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(valueSize);
   doc.setTextColor(...COLORS.ink);
   const lines = doc.splitTextToSize(value || "-", width);
-  doc.text(lines, x, y + 5);
+  doc.text(lines, x, y + valueOffset);
   return lines.length;
+};
+
+const getTextPairHeight = (
+  doc,
+  value,
+  width = 70,
+  {
+    blockTop = 5.2,
+    lineHeight = 3.2,
+  } = {},
+) => {
+  const lines = doc.splitTextToSize(value || "-", width);
+  return blockTop + lines.length * lineHeight;
 };
 
 const addPageFooter = (doc) => {
@@ -202,14 +261,22 @@ const getRoutePath = (routes = []) => {
   return path.join("-");
 };
 
+const getLegTypeLabel = (route) => {
+  if (route?.positioningType === "return_to_base") return "RETURN TO BASE";
+  if (route?.positioning) return "REPOSITIONING";
+  return "CLIENT LEG";
+};
+
 export const generateReservationPDF = async ({
   form,
   routes,
   breakdowns = [],
   pricingSummary = null,
+  tripDates = {},
   totals,
   getAircraftName,
   getAircraftById,
+  getRouteAirportDisplay,
 }) => {
   const doc = new jsPDF({ compress: true });
   const firstCustomerRoute = routes.find((route) => !route?.positioning) || routes[0] || {};
@@ -221,9 +288,12 @@ export const generateReservationPDF = async ({
     (sum, item) => sum + formatWholeDays(item.nights),
     0,
   );
-  const tripType = totals.iva > 0 ? "International Charter" : "National Charter";
   const totalFlightTime = pricingSummary?.totals?.flightTime ?? 0;
   const totalFlightTimeMinutes = pricingSummary?.totals?.flightTimeMinutes ?? 0;
+  const tripStartDateLabel = formatTripDateTime(tripDates?.tripStartDate) || "-";
+  const tripEndDateLabel = formatTripDateTime(tripDates?.tripEndDate) || "-";
+  const hasDistinctReturnDate =
+    Boolean(tripDates?.tripEndDate) && tripStartDateLabel !== tripEndDateLabel;
 
   const logo = await loadImage(`${import.meta.env.BASE_URL}images/logo.png`);
   const secondaryLogo = await loadImage(`${import.meta.env.BASE_URL}images/logoo.png`);
@@ -274,67 +344,144 @@ export const generateReservationPDF = async ({
   const profileRows = [
     ["Aircraft", aircraftName],
     ["Route", getRoutePath(routes)],
-    ["Trip Type", tripType],
-    ["Passengers", String(firstCustomerRoute.passengers || 0)],
   ];
 
-  const getCardHeight = (rows, width) => {
-    let height = 17;
-    rows.forEach(([, value]) => {
-      const lines = doc.splitTextToSize(value || "-", width);
-      height += 7 + lines.length * 4.2;
-    });
-    return Math.max(height, 56);
+  const cardTop = 64;
+  const cardPaddingX = 6;
+  const cardPaddingTop = 7.5;
+  const cardPaddingBottom = 5.5;
+  const cardTitleY = cardTop + cardPaddingTop + 2.8;
+  const cardBodyStartY = cardTitleY + 7;
+  const cardFieldGap = 0.8;
+  const tripSummaryGap = 2.2;
+  const tripSummaryLabelSize = 7.1;
+  const tripSummaryValueSize = 8.4;
+  const tripSummaryValueOffset = 3;
+  const tripSummaryLineHeight = 3;
+  const tripSummaryColumnWidth = hasDistinctReturnDate ? 28 : 66;
+  const cardTextOptions = {
+    labelSize: 7.1,
+    valueSize: 8.4,
+    valueOffset: 3,
+  };
+  const cardHeightOptions = {
+    blockTop: 4.8,
+    lineHeight: 3,
   };
 
+  const getCardHeight = (rows, width) => {
+    let height = cardBodyStartY - cardTop;
+    rows.forEach(([, value]) => {
+      height += getTextPairHeight(doc, value, width, cardHeightOptions) + cardFieldGap;
+    });
+    height -= cardFieldGap;
+    return height + cardPaddingBottom;
+  };
+
+  const tripSummaryHeight = (() => {
+    const startLines = doc.splitTextToSize(tripStartDateLabel, tripSummaryColumnWidth);
+    const endLines = doc.splitTextToSize(tripEndDateLabel, tripSummaryColumnWidth);
+    const maxLines = hasDistinctReturnDate
+      ? Math.max(startLines.length, endLines.length)
+      : startLines.length;
+    return 5.2 + maxLines * tripSummaryLineHeight;
+  })();
+  const profileBaseHeight =
+    getCardHeight(profileRows, 68) - cardPaddingBottom;
+  const profileCardHeight =
+    profileBaseHeight + tripSummaryGap + tripSummaryHeight + cardPaddingBottom;
   const cardHeight = Math.max(
     getCardHeight(clientRows, 68),
-    getCardHeight(profileRows, 68),
+    profileCardHeight,
   );
 
   doc.setFillColor(...COLORS.panel);
   doc.setDrawColor(...COLORS.line);
   doc.setLineWidth(0.25);
-  doc.roundedRect(20, 64, 82, cardHeight, 4, 4, "FD");
-  doc.roundedRect(108, 64, 82, cardHeight, 4, 4, "FD");
+  doc.roundedRect(20, cardTop, 82, cardHeight, 4, 4, "FD");
+  doc.roundedRect(108, cardTop, 82, cardHeight, 4, 4, "FD");
   doc.setFillColor(...COLORS.gold);
-  doc.rect(20, 64, 82, 1.4, "F");
-  doc.rect(108, 64, 82, 1.4, "F");
+  doc.rect(20, cardTop, 82, 1.4, "F");
+  doc.rect(108, cardTop, 82, 1.4, "F");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10.5);
   doc.setTextColor(...COLORS.ink);
-  doc.text("Client Information", 26, 75);
-  doc.text("Trip Profile", 114, 75);
+  doc.text("Client Information", 20 + cardPaddingX, cardTitleY);
+  doc.text("Trip Profile", 108 + cardPaddingX, cardTitleY);
 
-  let clientY = 85;
+  let clientY = cardBodyStartY;
   clientRows.forEach(([label, value]) => {
-    const usedLines = drawTextPair(doc, label, value, 26, clientY, 68);
-    clientY += 7 + usedLines * 4.2;
+    const usedLines = drawTextPair(
+      doc,
+      label,
+      value,
+      20 + cardPaddingX,
+      clientY,
+      68,
+      cardTextOptions,
+    );
+    clientY +=
+      getTextPairHeight(doc, value, 68, cardHeightOptions) + cardFieldGap;
   });
 
-  let profileY = 85;
+  let profileY = cardBodyStartY;
   profileRows.forEach(([label, value]) => {
-    const usedLines = drawTextPair(doc, label, value, 114, profileY, 68);
-    profileY += 7 + usedLines * 4.2;
+    drawTextPair(
+      doc,
+      label,
+      value,
+      108 + cardPaddingX,
+      profileY,
+      68,
+      cardTextOptions,
+    );
+    profileY +=
+      getTextPairHeight(doc, value, 68, cardHeightOptions) + cardFieldGap;
   });
 
-  let y = 64 + cardHeight + 5;
+  profileY += tripSummaryGap;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(tripSummaryLabelSize);
+  doc.setTextColor(...COLORS.steel);
+  doc.text("DEPARTURE DATE", 108 + cardPaddingX, profileY);
+  if (hasDistinctReturnDate) {
+    doc.text("RETURN DATE", 108 + cardPaddingX + 40, profileY);
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(tripSummaryValueSize);
+  doc.setTextColor(...COLORS.ink);
+  doc.text(
+    doc.splitTextToSize(tripStartDateLabel, tripSummaryColumnWidth),
+    108 + cardPaddingX,
+    profileY + tripSummaryValueOffset,
+  );
+  if (hasDistinctReturnDate) {
+    doc.text(
+      doc.splitTextToSize(tripEndDateLabel, tripSummaryColumnWidth),
+      108 + cardPaddingX + 40,
+      profileY + tripSummaryValueOffset,
+    );
+  }
+
+  let y = cardTop + cardHeight + 5;
 
   drawSectionTitle(doc, "Flight Legs", 20, y);
-  y += 8;
+  y += 7;
 
   doc.setFillColor(...COLORS.accentSoft);
-  doc.roundedRect(20, y, 170, 10, 2, 2, "F");
+  doc.roundedRect(20, y, 170, 9, 2, 2, "F");
   doc.setTextColor(...COLORS.accent);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.text("#", 25, y + 6.5);
-  doc.text("DEPARTURE", 38, y + 6.5);
-  doc.text("ARRIVAL", 90, y + 6.5);
-  doc.text("DIST (NM)", 140, y + 6.5, { align: "right" });
-  doc.text("TIME", 182, y + 6.5, { align: "right" });
-  y += 10;
+  doc.setFontSize(7.1);
+  doc.text("#", 25, y + 5.9);
+  doc.text("TYPE", 37, y + 5.9);
+  doc.text("DEPARTURE", 58, y + 5.9);
+  doc.text("ARRIVAL", 111, y + 5.9);
+  doc.text("DIST (NM)", 166, y + 5.9, { align: "right" });
+  doc.text("TIME", 181, y + 5.9, { align: "right" });
+  y += 9;
 
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...COLORS.ink);
@@ -343,32 +490,49 @@ export const generateReservationPDF = async ({
     const miles = breakdowns[index]?.miles || 0;
     const hours = breakdowns[index]?.hours || 0;
     const estimatedHHMM = breakdowns[index]?.estimatedHHMM || formatHours(hours);
-    const fromLabel = route?.positioning
-      ? `${route.fromAirport || "-"} (${route.positioningType === "return_to_base" ? "Return to base" : "Repositioning"})`
-      : route.fromAirport || "-";
-    const fromText = doc.splitTextToSize(fromLabel, 45);
-    const toText = doc.splitTextToSize(route.toAirport || "-", 45);
-    const rowHeight = Math.max(fromText.length, toText.length) * 4.4 + 6.2;
+    const typeLabel = getLegTypeLabel(route);
+    const typeFontSize = typeLabel.length > 12 ? 4.6 : 5.2;
+    const departureLabel = getRouteAirportDisplay?.(route, "from") || route.fromAirport || "-";
+    const arrivalLabel = getRouteAirportDisplay?.(route, "to") || route.toAirport || "-";
+    const fromText = doc.splitTextToSize(departureLabel, 47);
+    const toText = doc.splitTextToSize(arrivalLabel, 47);
+    const rowHeight =
+      Math.max(fromText.length, toText.length) * 3.9 + 5.4;
+    const typeFill =
+      route?.positioningType === "return_to_base"
+        ? COLORS.goldSoft
+        : route?.positioning
+          ? [252, 240, 204]
+          : COLORS.white;
 
     if (index % 2 === 0) {
       doc.setFillColor(...COLORS.zebra);
       doc.rect(20, y, 170, rowHeight, "F");
     }
 
-    doc.setFontSize(8.5);
-    doc.text(String(index + 1), 25, y + 6.2);
-    doc.text(fromText, 38, y + 6.2);
-    doc.text(toText, 90, y + 6.2);
+    doc.setFontSize(8.1);
+    doc.text(String(index + 1), 25, y + 5.4);
+    doc.setFillColor(...typeFill);
+    doc.roundedRect(33, y + 1.6, 18, rowHeight - 3.2, 1.2, 1.2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(typeFontSize);
+    doc.setTextColor(...COLORS.accent);
+    doc.text(typeLabel, 42, y + 5.2, { align: "center", maxWidth: 16.5 });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.1);
+    doc.setTextColor(...COLORS.ink);
+    doc.text(fromText, 56, y + 5.4);
+    doc.text(toText, 109, y + 5.4);
     doc.text(
       Number(miles).toLocaleString("en-US", {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }),
-      140,
-      y + 6.2,
+      166,
+      y + 5.4,
       { align: "right" },
     );
-    doc.text(estimatedHHMM, 182, y + 6.2, { align: "right" });
+    doc.text(estimatedHHMM, 181, y + 5.4, { align: "right" });
 
     doc.setDrawColor(...COLORS.line);
     doc.line(20, y + rowHeight, 190, y + rowHeight);
