@@ -29,7 +29,8 @@ const content = {
     primaryCta: "Quote My Flight",
     secondaryCta: "Talk to an Advisor",
     poster: "images/jet-interior-2.webp",
-    video: "images/Home/home2.mp4",
+    video: "images/Home/Video3.mp4",
+    mobileVideo: "images/Home/6.mp4",
     metrics: [
       { value: "24/7", label: "flight coordination" },
       { value: "Aviation", label: "coordination support" },
@@ -40,6 +41,8 @@ const content = {
   why: {
     eyebrow: "Why Sky Group",
     title: "Private aviation coordination built around your itinerary.",
+    image: "images/Home/IMG_0319.jpeg",
+    imageAlt: "Sky Group private flight onboard experience",
     items: [
       {
         icon: "sparkles",
@@ -115,7 +118,7 @@ const content = {
     cta: "View Available Aircraft",
     allLabel: "All",
     modelCta: "View models",
-    backgroundImage: "images/Home/FONDO/home1.png",
+    backgroundImage: "images/Home/FONDO/GulfstreamG550.jpg",
     decorImage: "images/Home/FONDO/supermijet.png",
     benefitsLabel: "Operational advantages",
     benefits: [
@@ -229,6 +232,8 @@ const content = {
     title: "Real content, direct support and operational follow-up.",
     description:
       "The Sky Group experience is reflected in itinerary coordination, passenger care and visible attention to detail throughout the journey.",
+    image: "images/Home/IMG_0334.jpeg",
+    imageAlt: "Executive cabin with premium Sky Group attention",
     badge: "images/Home/CATERIING/experiencia.png",
     badgeAlt: "IS-BAO certification",
     items: [

@@ -23,7 +23,7 @@
           >
             <source
               v-if="enableHeroVideo"
-              :src="assetUrl(content.hero.video)"
+              :src="assetUrl(activeHeroVideo)"
               type="video/mp4"
             />
           </video>
@@ -288,24 +288,52 @@
               </div>
             </article>
           </div>
+
+          <figure v-if="content.why.image" class="section-photo reveal narrative-photo">
+            <img
+              :src="assetUrl(content.why.image)"
+              :alt="content.why.imageAlt || content.why.title"
+              loading="lazy"
+              decoding="async"
+            />
+          </figure>
         </div>
       </section>
 
       <div class="section-divider" aria-hidden="true"><i></i><i></i><i></i></div>
       <section class="section trust">
-        <div class="shell trust-grid trust-grid--copy-only">
-          <div class="section-copy premium-heading reveal">
-            <span class="eyebrow">{{ content.trust.eyebrow }}</span>
-            <span class="section-emblem" aria-hidden="true"><Plane /></span>
+        <div class="shell trust-grid">
+          <div class="section-copy premium-heading reveal trust-copy">
+            <span class="eyebrow trust-copy__eyebrow">{{ content.trust.eyebrow }}</span>
+            <span class="section-emblem trust-copy__emblem" aria-hidden="true"><Plane /></span>
             <h2>{{ content.trust.title }}</h2>
+            <span class="trust-copy__rule" aria-hidden="true"></span>
             <p>{{ content.trust.description }}</p>
+          </div>
 
-            <div class="trust-lines">
-              <div v-for="item in content.trust.items" :key="item">
-                <ShieldCheck aria-hidden="true" />
-                <span>{{ item }}</span>
-              </div>
-            </div>
+          <figure v-if="content.trust.image" class="section-photo reveal trust-photo">
+            <img
+              :src="assetUrl(content.trust.image)"
+              :alt="content.trust.imageAlt || content.trust.title"
+              loading="lazy"
+              decoding="async"
+            />
+            <span class="trust-photo__base" aria-hidden="true"></span>
+          </figure>
+
+          <div class="trust-lines reveal">
+            <article
+              v-for="(item, index) in content.trust.items"
+              :key="item"
+              class="trust-line"
+            >
+              <span class="trust-line__icon">
+                <component :is="trustIconFor(index)" aria-hidden="true" />
+              </span>
+              <span class="trust-line__bar" aria-hidden="true"></span>
+              <span class="trust-line__text">{{ item }}</span>
+              <ArrowRight class="trust-line__arrow" aria-hidden="true" />
+            </article>
           </div>
         </div>
       </section>
@@ -464,7 +492,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
   ArrowRight,
@@ -507,6 +535,7 @@ const router = useRouter();
 const { localizedPath } = useLocalizedNavigation();
 const heroVideo = ref(null);
 const enableHeroVideo = ref(false);
+const isMobileViewport = ref(false);
 const scrollProgress = ref(0);
 const heroParallax = ref(0);
 const activeFleetFilter = ref("all");
@@ -542,6 +571,8 @@ const fleetBenefitIconMap = {
   tailored: Handshake,
 };
 
+const trustFeatureIcons = [ShieldCheck, UsersRound, CalendarCheck];
+
 const fleetIconMap = {
   helicopter: Helicopter,
   turboprop: Plane,
@@ -569,6 +600,7 @@ const statIconMap = {
 const fleetIconFor = (name) => fleetIconMap[name] ?? Plane;
 const statIconFor = (name) => statIconMap[name] ?? Gauge;
 const fleetBenefitIconFor = (name) => fleetBenefitIconMap[name] ?? ShieldCheck;
+const trustIconFor = (index) => trustFeatureIcons[index] ?? ShieldCheck;
 const fleetRouteFor = (item) => ({
   path: localizedPath("fleet"),
   query: item?.icon
@@ -582,6 +614,11 @@ const filteredFleetItems = computed(() => {
   return items.filter((item) => item.name === activeFleetFilter.value);
 });
 const showLookbooksSection = computed(() => props.content.lookbooks?.enabled !== false);
+const activeHeroVideo = computed(() =>
+  isMobileViewport.value && props.content.hero.mobileVideo
+    ? props.content.hero.mobileVideo
+    : props.content.hero.video,
+);
 
 const renderHeroTitle = (title = "") => {
   if (title.includes("Vuelo Privado")) {
@@ -669,7 +706,7 @@ const handleScrollMotion = () => {
   heroParallax.value = Math.min(scrollTop * 0.06, 34);
 };
 
-onMounted(() => {
+const updateHeroMediaState = () => {
   const connection =
     navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   const prefersReducedMotion = window.matchMedia(
@@ -679,14 +716,13 @@ onMounted(() => {
   const slowConnection = ["slow-2g", "2g", "3g"].includes(
     connection?.effectiveType,
   );
-  const smallScreen = window.innerWidth < 768;
 
-  enableHeroVideo.value = !(
-    prefersReducedMotion ||
-    saveData ||
-    slowConnection ||
-    smallScreen
-  );
+  isMobileViewport.value = window.innerWidth < 768;
+  enableHeroVideo.value = !(prefersReducedMotion || saveData || slowConnection);
+};
+
+onMounted(() => {
+  updateHeroMediaState();
 
   if (enableHeroVideo.value && heroVideo.value) {
     heroVideo.value.play().catch(() => {});
@@ -694,6 +730,7 @@ onMounted(() => {
 
   handleScrollMotion();
   window.addEventListener("scroll", handleScrollMotion, { passive: true });
+  window.addEventListener("resize", updateHeroMediaState, { passive: true });
 
   const elements = document.querySelectorAll(".home-page .reveal");
   startCateringAutoplay();
@@ -725,6 +762,17 @@ onBeforeUnmount(() => {
   observer?.disconnect();
   stopCateringAutoplay();
   window.removeEventListener("scroll", handleScrollMotion);
+  window.removeEventListener("resize", updateHeroMediaState);
+});
+
+watch([activeHeroVideo, enableHeroVideo], async () => {
+  if (!enableHeroVideo.value || !heroVideo.value) return;
+  heroVideo.value.load();
+  try {
+    await heroVideo.value.play();
+  } catch {
+    // Ignore autoplay interruptions from the browser.
+  }
 });
 </script>
 
@@ -1331,6 +1379,32 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--line);
 }
 
+.section-photo {
+  position: relative;
+  margin: 0;
+  min-height: 420px;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #dfe7ee;
+  box-shadow: 0 28px 64px rgba(7, 26, 51, 0.12);
+}
+
+.section-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.narrative-photo {
+  grid-column: 1 / 2;
+  grid-row: 1 / 3;
+}
+
+.trust-photo {
+  min-height: 500px;
+}
+
 .feature-row {
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr);
@@ -1840,8 +1914,25 @@ onBeforeUnmount(() => {
 
 .fleet-showcase__background {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: clamp(360px, 42vw, 620px);
   pointer-events: none;
+  overflow: hidden;
+}
+
+.fleet-showcase__background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(220, 236, 246, 0.04) 0%,
+    rgba(220, 236, 246, 0.12) 48%,
+    rgba(220, 236, 246, 0.82) 78%,
+    #dcecf6 100%
+  );
 }
 
 .fleet-showcase__backdrop {
@@ -1850,8 +1941,8 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center center;
-  opacity: 1;
+  object-position: center 48%;
+  opacity: 0.96;
   filter: none;
 }
 
@@ -1878,10 +1969,10 @@ onBeforeUnmount(() => {
 }
 
 .fleet-copy .eyebrow {
-  color: rgba(255, 255, 255, 0.96);
+  color: #071a33;
   font-size: 0.86rem;
   letter-spacing: 0.22em;
-  text-shadow: 0 2px 18px rgba(7, 26, 51, 0.18);
+  text-shadow: none;
 }
 
 .fleet-emblem {
@@ -1909,15 +2000,21 @@ onBeforeUnmount(() => {
 }
 
 .fleet-copy h2 {
-  max-width: 920px;
+  max-width: 720px;
   margin: 0 auto 18px;
-  color: #071a33;
+  color: #08264a;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(48px, 5vw, 82px);
+  font-size: clamp(42px, 4.2vw, 64px);
   font-weight: 500;
-  line-height: 0.95;
+  line-height: 1.02;
   letter-spacing: -0.05em;
   text-wrap: balance;
+  -webkit-text-stroke: 0.4px rgba(255, 255, 255, 0.65);
+  text-shadow:
+    0 0 3px rgba(255, 255, 255, 0.95),
+    0 0 8px rgba(255, 255, 255, 0.88),
+    0 0 16px rgba(255, 248, 232, 0.7),
+    0 2px 4px rgba(7, 32, 61, 0.14);
 }
 
 .fleet-copy__emphasis {
@@ -1929,11 +2026,11 @@ onBeforeUnmount(() => {
 .fleet-copy p {
   max-width: 680px;
   margin: 0 auto;
-  color: rgba(255, 255, 255, 0.96);
+  color: #071a33;
   font-size: 1.04rem;
   line-height: 1.48;
   text-wrap: balance;
-  text-shadow: 0 2px 18px rgba(7, 26, 51, 0.24);
+  text-shadow: none;
 }
 
 .fleet-filters {
@@ -1998,7 +2095,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   margin-top: 1.5rem;
-  color: rgba(255, 255, 255, 0.98);
+  color: #071a33;
   font-size: 0.84rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -2331,6 +2428,14 @@ onBeforeUnmount(() => {
   .text-link:hover {
     transform: translateX(4px);
   }
+
+  .trust-line:hover {
+    background: rgba(12, 47, 78, 0.022);
+  }
+
+  .trust-line:hover .trust-line__arrow {
+    transform: translateX(4px);
+  }
 }
 
 .trust {
@@ -2338,49 +2443,132 @@ onBeforeUnmount(() => {
 }
 
 .trust-grid {
-  grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
+  width: min(1500px, calc(100% - 128px));
+  grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr);
+  grid-template-areas:
+    "copy photo"
+    "lines photo";
+  gap: 34px 82px;
+  align-items: start;
 }
 
-.trust-grid--copy-only {
-  grid-template-columns: minmax(0, 1fr);
-  max-width: 980px;
+.trust-copy {
+  grid-area: copy;
+  text-align: left;
 }
 
-.trust-mark {
-  display: grid;
-  place-items: center;
-  min-height: 420px;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+.trust-copy__eyebrow {
+  color: #c79a3b;
+  letter-spacing: 0.22em;
 }
 
-.trust-mark img {
-  width: min(900%, 490px);
-  height: auto;
+.trust-copy__emblem {
+  margin-bottom: 18px;
 }
 
-.trust-lines {
-  display: grid;
-  gap: 14px;
-  margin-top: 1.8rem;
+.trust-copy h2 {
+  max-width: 12ch;
+  margin-bottom: 0;
+  font-size: clamp(3.875rem, 4.6vw, 4.35rem);
+  line-height: 1.01;
+  text-wrap: balance;
 }
 
-.trust-lines div {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--line);
-  color: var(--ink);
+.trust-copy__rule {
+  display: block;
+  width: 74px;
+  height: 2px;
+  margin: 22px 0 24px;
+  border-radius: 999px;
+  background: #c79a3b;
+}
+
+.trust-copy p {
+  max-width: 34rem;
+  color: #667988;
+  font-size: 1.08rem;
   line-height: 1.6;
 }
 
-.trust-lines svg {
+.trust-photo {
+  grid-area: photo;
+  min-height: 590px;
+  box-shadow: 0 28px 60px rgba(7, 26, 51, 0.1);
+}
+
+.trust-photo img {
+  object-position: center 52%;
+}
+
+.trust-photo__base {
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  bottom: -14px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(205, 216, 226, 0.85);
+  filter: blur(0.4px);
+  z-index: -1;
+}
+
+.trust-lines {
+  grid-area: lines;
+  display: grid;
+  gap: 0;
+  margin-top: 0;
+}
+
+.trust-line {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 78px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: #071a33;
+  transition:
+    background-color 220ms ease,
+    transform 220ms ease;
+}
+
+.trust-line__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(7, 26, 51, 0.08);
+  flex: 0 0 auto;
+}
+
+.trust-line__icon svg {
   width: 20px;
   height: 20px;
-  margin-top: 2px;
-  color: var(--blue);
+  color: #c79a3b;
+}
+
+.trust-line__bar {
+  width: 1px;
+  height: 32px;
+  background: rgba(199, 154, 59, 0.85);
   flex: 0 0 auto;
+}
+
+.trust-line__text {
+  flex: 1 1 auto;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.trust-line__arrow {
+  width: 16px;
+  height: 16px;
+  color: #c79a3b;
+  flex: 0 0 auto;
+  transition: transform 220ms ease;
 }
 
 .final-cta {
@@ -2549,6 +2737,39 @@ onBeforeUnmount(() => {
     gap: 38px;
   }
 
+  .trust-grid {
+    width: min(100% - 40px, 1500px);
+    grid-template-areas:
+      "copy"
+      "photo"
+      "lines";
+    gap: 26px;
+  }
+
+  .trust-copy h2 {
+    max-width: 13ch;
+    font-size: clamp(3.15rem, 5vw, 3.5rem);
+  }
+
+  .trust-photo {
+    min-height: 480px;
+  }
+
+  .narrative-photo {
+    grid-column: auto;
+    grid-row: auto;
+    order: 3;
+  }
+
+  .trust-photo,
+  .section-photo {
+    min-height: 360px;
+  }
+
+  .trust-photo {
+    min-height: 480px;
+  }
+
   .flow-shell { width: min(100% - 40px, 1200px); }
   .flow-heading h2 { font-size: clamp(3rem, 5.5vw, 3.625rem); }
   .flow-step { min-height: 370px; padding-inline: 24px; }
@@ -2566,7 +2787,10 @@ onBeforeUnmount(() => {
     padding-top: 0;
   }
 
-  .fleet-copy h2 { font-size: clamp(3rem, 5.5vw, 3.625rem); }
+  .fleet-copy h2 {
+    max-width: 680px;
+    font-size: clamp(2.8rem, 4.7vw, 3.4rem);
+  }
 
   .fleet-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2667,8 +2891,77 @@ onBeforeUnmount(() => {
     gap: 34px;
   }
 
+  .trust-copy {
+    text-align: left;
+  }
+
+  .trust-copy__emblem {
+    margin: 14px 0 22px;
+  }
+
+  .trust-copy h2 {
+    max-width: 11ch;
+    margin: 0 0 16px;
+    font-size: clamp(2.4rem, 8.8vw, 2.75rem);
+    line-height: 1.03;
+  }
+
+  .trust-copy__rule {
+    margin: 0 0 18px;
+  }
+
+  .trust-copy p {
+    margin-inline: 0;
+    font-size: 1rem;
+  }
+
+  .trust-photo {
+    min-height: 340px;
+    order: 2;
+  }
+
+  .trust-photo__base {
+    left: 18px;
+    right: 18px;
+    bottom: -10px;
+    height: 14px;
+  }
+
+  .trust-lines {
+    order: 3;
+  }
+
+  .trust-line {
+    min-height: 74px;
+    gap: 14px;
+    padding: 10px 0;
+  }
+
+  .trust-line__icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .trust-line__text {
+    font-size: 0.97rem;
+  }
+
+  .section-photo,
+  .trust-photo {
+    min-height: 300px;
+    border-radius: 20px;
+  }
+
+  .trust-photo {
+    min-height: 340px;
+  }
+
   .fleet-preview {
     padding-top: 78px;
+  }
+
+  .fleet-showcase__background {
+    height: clamp(320px, 48vw, 460px);
   }
 
   .fleet-showcase__jet {
@@ -2679,8 +2972,14 @@ onBeforeUnmount(() => {
   }
 
   .fleet-copy h2 {
-    font-size: clamp(2.4rem, 10vw, 3rem);
+    max-width: 12ch;
+    font-size: clamp(2.15rem, 6.6vw, 2.8rem);
     line-height: 1.02;
+    text-shadow:
+      0 0 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.88),
+      0 0 11px rgba(255, 248, 232, 0.68),
+      0 2px 4px rgba(7, 32, 61, 0.12);
   }
 
   .fleet-strip {
@@ -2841,8 +3140,22 @@ onBeforeUnmount(() => {
   }
 
   .fleet-copy h2 {
-    font-size: clamp(2.25rem, 10.5vw, 2.625rem);
+    max-width: 11ch;
+    font-size: clamp(2rem, 8vw, 2.45rem);
     line-height: 1.02;
+    text-shadow:
+      0 0 2px rgba(255, 255, 255, 0.95),
+      0 0 6px rgba(255, 255, 255, 0.88),
+      0 0 11px rgba(255, 248, 232, 0.68),
+      0 2px 4px rgba(7, 32, 61, 0.12);
+  }
+
+  .fleet-showcase__background {
+    height: 280px;
+  }
+
+  .fleet-showcase__backdrop {
+    object-position: 58% 54%;
   }
 
   .fleet-emblem,

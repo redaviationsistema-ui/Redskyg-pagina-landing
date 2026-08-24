@@ -29,7 +29,8 @@ const content = {
     primaryCta: "Cotizar mi vuelo",
     secondaryCta: "Hablar con un asesor",
     poster: "images/jet-interior-2.webp",
-    video: "images/Home/home2.mp4",
+    video: "images/Home/Video3.mp4",
+    mobileVideo: "images/Home/6.mp4",
     metrics: [
       { value: "24/7", label: "Coordinación de vuelo" },
       { value: "Experiencia", label: "25 años de servicio continuo" },
@@ -45,6 +46,8 @@ const content = {
   why: {
     eyebrow: "Por qué Sky Group",
     title: "Una coordinación de vuelo pensada para tu itinerario.",
+    image: "images/Home/IMG_0319.jpeg",
+    imageAlt: "Experiencia a bordo en vuelo privado Sky Group",
     items: [
       {
         icon: "sparkles",
@@ -120,7 +123,7 @@ const content = {
     cta: "Ver aeronaves disponibles",
     allLabel: "Todas",
     modelCta: "Ver modelos",
-    backgroundImage: "images/Home/FONDO/home1.png",
+    backgroundImage: "images/Home/FONDO/GulfstreamG550.jpg",
     decorImage: "images/Home/FONDO/supermijet.png",
     benefitsLabel: "Ventajas operativas",
     benefits: [
@@ -234,6 +237,8 @@ const content = {
     title: "Operación sólida, atención al cliente y seguimiento operativo.",
     description:
       "La experiencia Sky Group se refleja en la coordinación del itinerario, la atención al pasajero y el cuidado visible en cada etapa del viaje.",
+    image: "images/Home/IMG_0334.jpeg",
+    imageAlt: "Cabina ejecutiva con atención premium Sky Group",
     badge: "images/Home/CATERIING/experiencia.png",
     badgeAlt: "Certificacion IS-BAO",
     items: [
