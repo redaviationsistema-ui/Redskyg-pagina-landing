@@ -51,6 +51,15 @@
                   <span aria-hidden="true">↻</span>
                   {{ copy.roundTripLabel }}
                 </button>
+                <button
+                  class="trip-toggle__button"
+                  type="button"
+                  :class="{ active: tripMode === 'multi-city' }"
+                  @click="setTripMode('multi-city')"
+                >
+                  <span aria-hidden="true">+</span>
+                  {{ copy.multiCityLabel }}
+                </button>
               </div>
             </div>
 
@@ -74,29 +83,17 @@
               </button>
             </div>
 
-            <div v-show="activeStep === 0" class="availability-grid">
+            <div v-show="activeStep === 0 && tripMode !== 'multi-city'" class="availability-grid">
               <div class="availability-field">
-                <label :for="fieldIds.from">{{ copy.fromLabel }}</label>
-                <div class="field-control">
-                  <PlaneTakeoff aria-hidden="true" />
-                  <select
-                    :id="fieldIds.from"
-                    v-model="routes[0].fromAirport"
-                    required
-                    :aria-describedby="`${fieldIds.from}-help`"
-                    @change="setCompactAirport('from')"
-                  >
-                    <option value="">{{ copy.selectAirport }}</option>
-                    <option
-                      v-for="airport in compactAirportOptions"
-                      :key="`from-${airport.iata || airport.aeropuerto}`"
-                      :value="getAirportOptionValue(airport)"
-                    >
-                      {{ airport.ciudad }} ({{ getAirportOptionValue(airport) }})
-                    </option>
-                  </select>
-                </div>
-                <small :id="`${fieldIds.from}-help`">{{ compactFromMeta }}</small>
+                <AirportAutocomplete
+                  v-model="routes[0].fromAirport"
+                  :input-id="fieldIds.from"
+                  :airports="compactAirportOptions"
+                  :label="copy.fromLabel"
+                  :placeholder="copy.selectAirport"
+                  :meta="compactFromMeta"
+                  @select="setCompactAirport('from', $event)"
+                />
               </div>
 
               <button
@@ -109,31 +106,19 @@
               </button>
 
               <div class="availability-field">
-                <label :for="fieldIds.to">{{ copy.toLabel }}</label>
-                <div class="field-control">
-                  <PlaneTakeoff aria-hidden="true" />
-                  <select
-                    :id="fieldIds.to"
-                    v-model="routes[0].toAirport"
-                    required
-                    :aria-describedby="`${fieldIds.to}-help`"
-                    @change="setCompactAirport('to')"
-                  >
-                    <option value="">{{ copy.selectAirport }}</option>
-                    <option
-                      v-for="airport in compactAirportOptions"
-                      :key="`to-${airport.iata || airport.aeropuerto}`"
-                      :value="getAirportOptionValue(airport)"
-                    >
-                      {{ airport.ciudad }} ({{ getAirportOptionValue(airport) }})
-                    </option>
-                  </select>
-                </div>
-                <small :id="`${fieldIds.to}-help`">{{ compactToMeta }}</small>
+                <AirportAutocomplete
+                  v-model="routes[0].toAirport"
+                  :input-id="fieldIds.to"
+                  :airports="compactAirportOptions"
+                  :label="copy.toLabel"
+                  :placeholder="copy.selectAirport"
+                  :meta="compactToMeta"
+                  @select="setCompactAirport('to', $event)"
+                />
               </div>
 
               <div class="availability-field">
-                <label :for="fieldIds.date">{{ copy.departureLabel }}</label>
+                <label :for="fieldIds.date">{{ copy.departureDateTimeLabel }}</label>
                 <div
                   class="field-control field-control--picker"
                   @click="openDatePicker(departureDateInputRef)"
@@ -142,7 +127,7 @@
                   <button
                     type="button"
                     class="field-control__overlay"
-                    :aria-label="copy.departureLabel"
+                    :aria-label="copy.departureDateTimeLabel"
                     @click.stop="openDatePicker(departureDateInputRef)"
                     @keydown.enter.prevent="openDatePicker(departureDateInputRef)"
                     @keydown.space.prevent="openDatePicker(departureDateInputRef)"
@@ -178,21 +163,50 @@
                 </div>
                 <small :id="`${fieldIds.passengers}-help`">{{ copy.passengerMeta }}</small>
               </div>
+
+              <div v-if="tripMode === 'round-trip'" class="availability-field">
+                <label :for="fieldIds.returnDate">{{ copy.returnDateTimeLabel }}</label>
+                <div
+                  class="field-control field-control--picker"
+                  @click="openDatePicker(extraRouteDateInputRefs[1])"
+                >
+                  <CalendarDays aria-hidden="true" />
+                  <button
+                    type="button"
+                    class="field-control__overlay"
+                    :aria-label="copy.returnDateTimeLabel"
+                    @click.stop="openDatePicker(extraRouteDateInputRefs[1])"
+                    @keydown.enter.prevent="openDatePicker(extraRouteDateInputRefs[1])"
+                    @keydown.space.prevent="openDatePicker(extraRouteDateInputRefs[1])"
+                  ></button>
+                  <input
+                    :ref="(element) => setExtraRouteDateInputRef(1, element)"
+                    :id="fieldIds.returnDate"
+                    v-model="returnRoute.start_date"
+                    type="datetime-local"
+                    required
+                    :min="routes[0].start_date || minDateTime"
+                    @change="syncExtraEndDate(1)"
+                  />
+                </div>
+                <small>{{ formatCompactDateMeta(returnRoute.start_date) }}</small>
+              </div>
             </div>
 
-            <template v-if="activeStep === 0 && hasReturnFlight">
+            <template v-if="activeStep === 0 && tripMode === 'multi-city'">
             <div
-              v-for="(extraRoute, extraIndex) in routes.slice(1)"
-              :key="extraRoute.id || `extra-route-${extraIndex}`"
+              v-for="(routeItem, routeIndex) in routes"
+              :key="routeItem.id || `multi-city-route-${routeIndex}`"
               class="return-flight-block"
             >
               <div class="return-flight-title">
-                <span>{{ getExtraRouteTitle(extraIndex) }}</span>
+                <span>{{ getSegmentTitle(routeIndex) }}</span>
                 <button
+                  v-if="routeIndex > 0"
                   class="remove-return-button"
                   type="button"
-                  :aria-label="copy.removeReturnLabel"
-                  @click="removeExtraFlight(extraIndex + 1)"
+                  :aria-label="copy.removeFlightLabel"
+                  @click="removeExtraFlight(routeIndex)"
                 >
                   ×
                 </button>
@@ -200,97 +214,73 @@
 
               <div class="availability-grid availability-grid--return">
                 <div class="availability-field">
-                  <label :for="`${fieldIds.returnFrom}-${extraIndex}`">{{ copy.fromLabel }}</label>
-                  <div class="field-control">
-                    <PlaneTakeoff aria-hidden="true" />
-                    <select
-                      :id="`${fieldIds.returnFrom}-${extraIndex}`"
-                      v-model="extraRoute.fromAirport"
-                      required
-                      @change="setExtraAirport(extraIndex + 1, 'from')"
-                    >
-                      <option value="">{{ copy.selectAirport }}</option>
-                      <option
-                        v-for="airport in compactAirportOptions"
-                        :key="`return-from-${airport.iata || airport.aeropuerto}`"
-                        :value="getAirportOptionValue(airport)"
-                      >
-                        {{ airport.ciudad }} ({{ getAirportOptionValue(airport) }})
-                      </option>
-                    </select>
-                  </div>
-                  <small>{{ getCompactAirportMeta(extraRoute.fromAirport) }}</small>
+                  <AirportAutocomplete
+                    v-model="routeItem.fromAirport"
+                    :input-id="`${fieldIds.returnFrom}-${routeIndex}`"
+                    :airports="compactAirportOptions"
+                    :label="copy.fromLabel"
+                    :placeholder="copy.selectAirport"
+                    :meta="getCompactAirportMeta(routeItem.fromAirport)"
+                    @select="setExtraAirport(routeIndex, 'from', $event)"
+                  />
                 </div>
 
                 <button
                   class="swap-button"
                   type="button"
                   :aria-label="copy.swapLabel"
-                  @click="swapExtraRoute(extraIndex + 1)"
+                  @click="swapExtraRoute(routeIndex)"
                 >
                   <ArrowLeftRight aria-hidden="true" />
                 </button>
 
                 <div class="availability-field">
-                  <label :for="`${fieldIds.returnTo}-${extraIndex}`">{{ copy.toLabel }}</label>
-                  <div class="field-control">
-                    <PlaneTakeoff aria-hidden="true" />
-                    <select
-                      :id="`${fieldIds.returnTo}-${extraIndex}`"
-                      v-model="extraRoute.toAirport"
-                      required
-                      @change="setExtraAirport(extraIndex + 1, 'to')"
-                    >
-                      <option value="">{{ copy.selectAirport }}</option>
-                      <option
-                        v-for="airport in compactAirportOptions"
-                        :key="`return-to-${airport.iata || airport.aeropuerto}`"
-                        :value="getAirportOptionValue(airport)"
-                      >
-                        {{ airport.ciudad }} ({{ getAirportOptionValue(airport) }})
-                      </option>
-                    </select>
-                  </div>
-                  <small>{{ getCompactAirportMeta(extraRoute.toAirport) }}</small>
+                  <AirportAutocomplete
+                    v-model="routeItem.toAirport"
+                    :input-id="`${fieldIds.returnTo}-${routeIndex}`"
+                    :airports="compactAirportOptions"
+                    :label="copy.toLabel"
+                    :placeholder="copy.selectAirport"
+                    :meta="getCompactAirportMeta(routeItem.toAirport)"
+                    @select="setExtraAirport(routeIndex, 'to', $event)"
+                  />
                 </div>
 
                 <div class="availability-field">
-                  <label :for="`${fieldIds.returnDate}-${extraIndex}`">
-                    {{ extraIndex === 0 ? copy.returnDateLabel : copy.departureLabel }}
-                  </label>
+                  <label :for="`${fieldIds.returnDate}-${routeIndex}`">{{ copy.segmentDateTimeLabel }}</label>
                   <div
                     class="field-control field-control--picker"
-                    @click="openDatePicker(extraRouteDateInputRefs[extraIndex + 1])"
+                    @click="openDatePicker(extraRouteDateInputRefs[routeIndex])"
                   >
                     <CalendarDays aria-hidden="true" />
                     <button
                       type="button"
                       class="field-control__overlay"
-                      :aria-label="extraIndex === 0 ? copy.returnDateLabel : copy.departureLabel"
-                      @click.stop="openDatePicker(extraRouteDateInputRefs[extraIndex + 1])"
-                      @keydown.enter.prevent="openDatePicker(extraRouteDateInputRefs[extraIndex + 1])"
-                      @keydown.space.prevent="openDatePicker(extraRouteDateInputRefs[extraIndex + 1])"
+                      :aria-label="copy.segmentDateTimeLabel"
+                      @click.stop="openDatePicker(extraRouteDateInputRefs[routeIndex])"
+                      @keydown.enter.prevent="openDatePicker(extraRouteDateInputRefs[routeIndex])"
+                      @keydown.space.prevent="openDatePicker(extraRouteDateInputRefs[routeIndex])"
                     ></button>
                     <input
-                      :ref="(element) => setExtraRouteDateInputRef(extraIndex + 1, element)"
-                      :id="`${fieldIds.returnDate}-${extraIndex}`"
-                      v-model="extraRoute.start_date"
+                      :ref="(element) => setExtraRouteDateInputRef(routeIndex, element)"
+                      :id="`${fieldIds.returnDate}-${routeIndex}`"
+                      v-model="routeItem.start_date"
                       type="datetime-local"
                       required
-                      :min="getExtraRouteMinDate(extraIndex + 1)"
-                      @change="syncExtraEndDate(extraIndex + 1)"
+                      :min="getExtraRouteMinDate(routeIndex)"
+                      @change="syncExtraEndDate(routeIndex)"
                     />
                   </div>
-                  <small>{{ formatCompactDateMeta(extraRoute.start_date) }}</small>
+                  <small>{{ formatCompactDateMeta(routeItem.start_date) }}</small>
                 </div>
 
-                <div class="availability-field">
-                  <label :for="`${fieldIds.returnPassengers}-${extraIndex}`">{{ copy.passengersLabel }}</label>
+                <div v-if="routeIndex === 0" class="availability-field">
+                  <label :for="`${fieldIds.returnPassengers}-${routeIndex}`">{{ copy.passengersLabel }}</label>
                   <div class="field-control">
                     <UsersRound aria-hidden="true" />
                     <select
-                      :id="`${fieldIds.returnPassengers}-${extraIndex}`"
-                      v-model.number="extraRoute.passengers"
+                      :id="`${fieldIds.returnPassengers}-${routeIndex}`"
+                      v-model.number="routeItem.passengers"
                       required
                     >
                       <option v-for="count in passengerOptions" :key="count" :value="count">
@@ -305,7 +295,7 @@
             </template>
 
             <button
-              v-show="activeStep === 0 && tripMode === 'round-trip'"
+              v-show="activeStep === 0 && tripMode === 'multi-city'"
               class="add-flight-button"
               type="button"
               @click="addCompactFlight"
@@ -313,6 +303,29 @@
               <span aria-hidden="true">+</span>
               {{ copy.addFlightLabel }}
             </button>
+
+            <div v-if="activeStep === 0 && itinerarySummary.length" class="itinerary-summary">
+              <div class="itinerary-summary__head">
+                <span>{{ copy.itinerarySummaryLabel }}</span>
+                <strong>{{ copy.tripModeLabels[tripMode] }}</strong>
+              </div>
+              <div class="itinerary-summary__body">
+                <template v-if="tripMode === 'round-trip'">
+                  <strong>{{ itinerarySummary[0]?.route }}</strong>
+                  <span>{{ copy.departureSummaryLabel }}: {{ itinerarySummary[0]?.date }}</span>
+                  <span>{{ copy.returnSummaryLabel }}: {{ itinerarySummary[1]?.date }}</span>
+                  <em>{{ routes[0]?.passengers || 1 }} {{ (routes[0]?.passengers || 1) === 1 ? copy.passenger : copy.passengers }}</em>
+                </template>
+                <template v-else>
+                  <div v-for="item in itinerarySummary" :key="item.key" class="itinerary-summary__leg">
+                    <span v-if="tripMode === 'multi-city'">{{ item.title }}</span>
+                    <strong>{{ item.route }}</strong>
+                    <small>{{ item.date }}</small>
+                  </div>
+                  <em>{{ routes[0]?.passengers || 1 }} {{ (routes[0]?.passengers || 1) === 1 ? copy.passenger : copy.passengers }}</em>
+                </template>
+              </div>
+            </div>
 
             <div v-show="activeStep === 1" class="step-panel">
               <div class="availability-field availability-field--wide">
@@ -325,14 +338,30 @@
                     @change="selectCompactAircraft(getAircraftById(routes[0].aircraft_id))"
                   >
                     <option :value="null">{{ copy.selectAircraft }}</option>
-                    <option
-                      v-for="aircraft in compactAircraftOptions"
-                      :key="aircraft.id"
-                      :value="aircraft.id"
+                    <optgroup
+                      v-for="group in visibleAircraftOptionGroups"
+                      :key="group.key"
+                      :label="group.label"
                     >
-                      {{ aircraft.name }} · {{ aircraft.capacity_passengers || "-" }} pax · {{ getCompactAircraftBaseLabel(aircraft) }}
-                    </option>
+                      <option
+                        v-for="aircraft in group.aircraft"
+                        :key="aircraft.id"
+                        :value="aircraft.id"
+                      >
+                        {{ getAircraftOptionLabel(aircraft) }}
+                      </option>
+                    </optgroup>
                   </select>
+                </div>
+                <div v-if="compactAircraftOptions.length" class="aircraft-options-helper">
+                  <span>{{ aircraftOptionsHelperText }}</span>
+                  <button
+                    v-if="hasHiddenAircraftOptions"
+                    type="button"
+                    @click="toggleAircraftOptionsVisibility"
+                  >
+                    {{ showAllAircraft ? copy.showLessAircraft : copy.showMoreAircraft }}
+                  </button>
                 </div>
                 <div v-if="selectedAircraft" class="compact-aircraft-summary">
                   <strong>{{ selectedAircraft.name }}</strong>
@@ -402,7 +431,7 @@
               {{ compactError }}
             </p>
 
-            <button class="availability-submit" type="submit">
+            <button class="availability-submit" type="submit" :disabled="isPrimaryButtonDisabled">
               <span>{{ compactSubmitLabel }}</span>
               <ChevronRight aria-hidden="true" />
             </button>
@@ -531,12 +560,18 @@ import {
 
 import MainLayout from "@/layouts/MainLayout.vue";
 import QuoteModal from "@/components/reservation/QuoteModal.vue";
+import AirportAutocomplete from "@/components/reservation/AirportAutocomplete.vue";
 import { generateReservationPDF } from "@/utils/pdfGenerator";
 
 const AIRCRAFT_TABLE = "aircraft_fleet";
 const COMMERCIAL_MARGIN_RATE = 0.15;
 const OTHER_CHARGES_DEFAULT = 0;
 const HELICOPTER_MAX_LEG_DISTANCE_NM = 200;
+const AIRCRAFT_DISTANCE_LIMITS = {
+  near: 150,
+  regional: 350,
+};
+const INITIAL_AIRCRAFT_VISIBLE_LIMIT = 12;
 const AIRCRAFT_TYPE_OPERATIONAL_MARGINS = {
   HELICOPTERO: {
     operationalMarginMinutes: 15,
@@ -612,11 +647,16 @@ const copy = computed(() =>
         selectFlightsTitle: "1. Selecciona tus vuelos",
         tripTypeLabel: "Tipo de viaje",
         oneWayLabel: "Solo ida",
-        roundTripLabel: "Vuelos múltiples",
+        roundTripLabel: "Viaje redondo",
+        multiCityLabel: "Multidestino",
         addFlightLabel: "Agregar otro vuelo",
         returnFlightLabel: "Vuelo de regreso",
+        removeFlightLabel: "Quitar vuelo",
         removeReturnLabel: "Quitar vuelo de regreso",
         returnDateLabel: "Fecha de regreso",
+        departureDateTimeLabel: "Fecha y hora de salida",
+        returnDateTimeLabel: "Fecha y hora de regreso",
+        segmentDateTimeLabel: "Fecha y hora",
         steps: ["Tu itinerario", "Opciones de aeronave", "Tus datos", "Recibe propuesta"],
         fromLabel: "Desde",
         toLabel: "Hacia",
@@ -632,6 +672,17 @@ const copy = computed(() =>
         selectAircraftCta: "Elegir aeronave",
         viewAircraftCta: "Ver aeronaves",
         noAircraftOptions: "No hay aeronaves disponibles para esa cantidad de pasajeros.",
+        aircraftOptionsHelper: "Mostrando aeronaves más cercanas a tu punto de salida.",
+        aircraftOptionsHelperAll: "Mostrando todas las aeronaves elegibles.",
+        showMoreAircraft: "Ver más aeronaves",
+        showLessAircraft: "Ver menos aeronaves",
+        aircraftGroupAtOrigin: "En aeropuerto de salida",
+        aircraftGroupNear: "Cercanos al origen",
+        aircraftGroupRegional: "Opciones regionales",
+        aircraftGroupOther: "Otras aeronaves",
+        aircraftGroupUnknown: "Ubicación no determinada",
+        aircraftBadgeAtOrigin: "EN ORIGEN",
+        aircraftBadgeNear: "CERCANA",
         nameLabel: "Nombre completo",
         emailLabel: "Correo",
         phoneLabel: "Telefono",
@@ -642,6 +693,9 @@ const copy = computed(() =>
         sendProposalCta: "Revisar propuesta",
         missingItinerary: "Selecciona origen, destino, fecha y pasajeros para continuar.",
         missingReturn: "Completa el vuelo de regreso o cambia a solo ida.",
+        incompleteFlights: "Completa todos los vuelos antes de continuar.",
+        invalidChronology: "La fecha y hora debe ser posterior al vuelo anterior.",
+        invalidReturnDate: "La fecha y hora de regreso debe ser posterior a la salida.",
         sameAirport: "El origen y destino deben ser diferentes.",
         missingAircraft: "Selecciona una aeronave disponible.",
         missingContact: "Completa nombre, correo y telefono.",
@@ -649,6 +703,15 @@ const copy = computed(() =>
         aircraftHelpFallback: "Elige una aeronave para calcular disponibilidad y propuesta.",
         swapLabel: "Intercambiar origen y destino",
         checkAvailability: "Consultar disponibilidad",
+        searchingAvailabilityCta: "Buscando disponibilidad...",
+        itinerarySummaryLabel: "Resumen",
+        departureSummaryLabel: "Salida",
+        returnSummaryLabel: "Regreso",
+        tripModeLabels: {
+          "one-way": "Solo ida",
+          "round-trip": "Viaje redondo",
+          "multi-city": "Multidestino",
+        },
         secureNote: "Tu informacion es segura y confidencial.",
         nextTitle: "Que pasa despues?",
         process: [
@@ -742,10 +805,15 @@ const copy = computed(() =>
         tripTypeLabel: "Trip type",
         oneWayLabel: "One way",
         roundTripLabel: "Round trip",
+        multiCityLabel: "Multi-city",
         addFlightLabel: "Add another flight",
         returnFlightLabel: "Return flight",
+        removeFlightLabel: "Remove flight",
         removeReturnLabel: "Remove return flight",
         returnDateLabel: "Return date",
+        departureDateTimeLabel: "Departure date & time",
+        returnDateTimeLabel: "Return date & time",
+        segmentDateTimeLabel: "Date & time",
         steps: ["Your itinerary", "Aircraft options", "Your details", "Receive proposal"],
         fromLabel: "From",
         toLabel: "To",
@@ -761,6 +829,17 @@ const copy = computed(() =>
         selectAircraftCta: "Choose aircraft",
         viewAircraftCta: "View aircraft",
         noAircraftOptions: "No aircraft are available for that passenger count.",
+        aircraftOptionsHelper: "Showing aircraft closest to your departure point.",
+        aircraftOptionsHelperAll: "Showing all eligible aircraft.",
+        showMoreAircraft: "Show more aircraft",
+        showLessAircraft: "Show fewer aircraft",
+        aircraftGroupAtOrigin: "At departure airport",
+        aircraftGroupNear: "Near origin",
+        aircraftGroupRegional: "Regional options",
+        aircraftGroupOther: "Other aircraft",
+        aircraftGroupUnknown: "Location not determined",
+        aircraftBadgeAtOrigin: "AT ORIGIN",
+        aircraftBadgeNear: "NEARBY",
         nameLabel: "Full name",
         emailLabel: "Email",
         phoneLabel: "Phone",
@@ -771,6 +850,9 @@ const copy = computed(() =>
         sendProposalCta: "Review proposal",
         missingItinerary: "Select origin, destination, date, and passengers to continue.",
         missingReturn: "Complete the return flight or switch to one way.",
+        incompleteFlights: "Complete every flight before continuing.",
+        invalidChronology: "Date and time must be later than the previous flight.",
+        invalidReturnDate: "Return date and time must be later than departure.",
         sameAirport: "Origin and destination must be different.",
         missingAircraft: "Select an available aircraft.",
         missingContact: "Complete your name, email, and phone.",
@@ -778,6 +860,15 @@ const copy = computed(() =>
         aircraftHelpFallback: "Choose an aircraft to calculate availability and proposal.",
         swapLabel: "Swap origin and destination",
         checkAvailability: "Check availability",
+        searchingAvailabilityCta: "Searching availability...",
+        itinerarySummaryLabel: "Summary",
+        departureSummaryLabel: "Departure",
+        returnSummaryLabel: "Return",
+        tripModeLabels: {
+          "one-way": "One way",
+          "round-trip": "Round trip",
+          "multi-city": "Multi-city",
+        },
         secureNote: "Your information is secure and confidential.",
         nextTitle: "What happens next?",
         process: [
@@ -874,6 +965,7 @@ const departureDateInputRef = ref(null);
 const extraRouteDateInputRefs = ref({});
 const activeStep = ref(0);
 const tripMode = ref("one-way");
+const showAllAircraft = ref(false);
 const routeType = ref("NATIONAL");
 const aircraftAvailability = ref(true);
 const returnToBaseEnabled = ref(false);
@@ -1130,22 +1222,34 @@ const getAirportOptionValue = (airport) =>
 
 const allAirports = computed(() => [
   ...airportsNational.value.map((airport) => ({
+    id: airport.id || airport.ID || airport.IATA || airport.AEROPUERTO,
     source: "NATIONAL",
+    name: airport.AEROPUERTO,
     aeropuerto: airport.AEROPUERTO,
     iata: (airport.IATA || airport.iata || "").toUpperCase(),
+    icao: (airport.ICAO || airport.icao || "").toUpperCase(),
+    city: airport.CIUDAD,
     ciudad: airport.CIUDAD,
     estado: airport.ESTADO,
     country: "MEXICO",
+    latitude: airport.LATITUDE,
+    longitude: airport.LONGITUDE,
     lat: airport.LATITUDE,
     lng: airport.LONGITUDE,
     type: norm(airport.TYPE),
   })),
   ...airportsInternational.value.map((airport) => ({
+    id: airport.id || airport.ID || airport.IATA || airport.AEROPUERTO,
     source: "INTERNATIONAL",
+    name: airport.AEROPUERTO,
     aeropuerto: airport.AEROPUERTO,
     iata: (airport.IATA || "").toUpperCase(),
+    icao: (airport.ICAO || airport.icao || "").toUpperCase(),
+    city: airport.CIUDAD,
     ciudad: airport.CIUDAD,
     country: airport.COUNTRY,
+    latitude: airport.LATITUDE,
+    longitude: airport.LONGITUDE,
     lat: airport.LATITUDE,
     lng: airport.LONGITUDE,
     type: norm(airport.TYPE),
@@ -1210,24 +1314,322 @@ const compactDateMeta = computed(() =>
   formatCompactDateMeta(routes.value[0]?.start_date),
 );
 
-const compactAircraftOptions = computed(() => {
+const normalizeAirportComparable = (value) =>
+  String(value || "").trim().toUpperCase();
+
+const getAirportComparableValues = (airport) => {
+  if (!airport) return [];
+
+  return [
+    airport.id,
+    airport.ID,
+    getAirportOptionValue(airport),
+    airport.iata,
+    airport.IATA,
+    airport.icao,
+    airport.ICAO,
+  ]
+    .map(normalizeAirportComparable)
+    .filter(Boolean);
+};
+
+const isSameAirport = (leftAirport, rightAirport) => {
+  const leftValues = getAirportComparableValues(leftAirport);
+  const rightValues = new Set(getAirportComparableValues(rightAirport));
+
+  if (!leftValues.length || !rightValues.size) return false;
+
+  return leftValues.some((value) => rightValues.has(value));
+};
+
+const getAirportCoordinates = (airport) => {
+  if (!airport) return null;
+
+  const lat = Number(airport.lat ?? airport.latitude ?? airport.LATITUDE);
+  const lng = Number(airport.lng ?? airport.longitude ?? airport.LONGITUDE);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  return { lat, lng };
+};
+
+const getAircraftPositioningDistanceNM = (aircraft) => {
+  const originAirport = findCompactAirport(routes.value[0]?.fromAirport);
+  const baseAirport = getAircraftBaseAirport(aircraft?.id);
+
+  if (!originAirport || !baseAirport) return Number.POSITIVE_INFINITY;
+  if (isSameAirport(baseAirport, originAirport)) return 0;
+
+  const baseCoordinates = getAirportCoordinates(baseAirport);
+  const originCoordinates = getAirportCoordinates(originAirport);
+
+  if (!baseCoordinates || !originCoordinates) return Number.POSITIVE_INFINITY;
+
+  return getDistanceNM(
+    baseCoordinates.lat,
+    baseCoordinates.lng,
+    originCoordinates.lat,
+    originCoordinates.lng,
+  );
+};
+
+const getCustomerRoutesForAircraft = (aircraftId) =>
+  routes.value
+    .filter(
+      (routeItem) =>
+        Number(routeItem.passengers) > 0 &&
+        routeItem.fromAirport &&
+        routeItem.toAirport,
+    )
+    .map((routeItem) => ({
+      ...routeItem,
+      aircraft_id: aircraftId,
+    }));
+
+const buildOperationalRoutesForAircraft = (aircraftId, routeItems = getCustomerRoutesForAircraft(aircraftId)) => {
+  const customerRoutes = routeItems.filter(
+    (routeItem) =>
+      Number(routeItem.passengers) > 0 &&
+      routeItem.aircraft_id &&
+      routeItem.fromAirport &&
+      routeItem.toAirport,
+  );
+
+  if (!customerRoutes.length) return [];
+
+  const firstRoute = customerRoutes[0];
+  const lastRoute = customerRoutes[customerRoutes.length - 1];
+  const aircraftBase = getAircraftBaseAirport(aircraftId);
+  const firstRouteOrigin = findAirportForRoute(firstRoute, "from");
+  const lastRouteDestination = findAirportForRoute(lastRoute, "to");
+
+  if (!aircraftBase) return [...customerRoutes];
+
+  if (itineraryStartsAndEndsAtBase(customerRoutes, aircraftBase)) {
+    return [...customerRoutes];
+  }
+
+  const operationalRoutes = [];
+
+  if (!isRouteEndpointAtBase(firstRoute, "from", aircraftBase)) {
+    operationalRoutes.push(
+      buildPositioningRoute(
+        aircraftId,
+        aircraftBase,
+        firstRouteOrigin || firstRoute.fromAirport,
+        "repositioning",
+      ),
+    );
+  }
+
+  operationalRoutes.push(...customerRoutes);
+
+  if (!isRouteEndpointAtBase(lastRoute, "to", aircraftBase)) {
+    operationalRoutes.push(
+      buildPositioningRoute(
+        aircraftId,
+        lastRouteDestination || lastRoute.toAirport,
+        aircraftBase,
+        "return_to_base",
+      ),
+    );
+  }
+
+  return operationalRoutes;
+};
+
+const getAircraftOperationalProfile = (aircraft) => {
+  const aircraftId = aircraft?.id;
+  const operationalRoutes = buildOperationalRoutesForAircraft(aircraftId);
+  const ferryLegCount = operationalRoutes.filter((routeItem) => routeItem.positioning).length;
+  const baseAirport = getAircraftBaseAirport(aircraftId);
+  const originAirport = findCompactAirport(routes.value[0]?.fromAirport);
+
+  return {
+    operationalRoutes,
+    isAtOrigin: originAirport ? isSameAirport(baseAirport, originAirport) : false,
+    positioningDistanceNM: getAircraftPositioningDistanceNM(aircraft),
+    requiresPositioning: operationalRoutes.some(
+      (routeItem) => routeItem.positioningType === "repositioning",
+    ),
+    requiresReturnToBase: operationalRoutes.some(
+      (routeItem) => routeItem.positioningType === "return_to_base",
+    ),
+    ferryLegCount,
+  };
+};
+
+const getAircraftDistanceGroupKey = (rankedAircraft) => {
+  if (rankedAircraft.isAtOrigin) return "atOrigin";
+  if (!Number.isFinite(rankedAircraft.positioningDistanceNM)) return "unknown";
+  if (rankedAircraft.positioningDistanceNM <= AIRCRAFT_DISTANCE_LIMITS.near) return "near";
+  if (rankedAircraft.positioningDistanceNM <= AIRCRAFT_DISTANCE_LIMITS.regional) return "regional";
+  return "other";
+};
+
+const aircraftDistanceGroupOrder = ["atOrigin", "near", "regional", "other", "unknown"];
+
+const aircraftDistanceGroupLabels = computed(() => ({
+  atOrigin: copy.value.aircraftGroupAtOrigin,
+  near: copy.value.aircraftGroupNear,
+  regional: copy.value.aircraftGroupRegional,
+  other: copy.value.aircraftGroupOther,
+  unknown: copy.value.aircraftGroupUnknown,
+}));
+
+const rankedAircraftOptions = computed(() => {
   const passengers = toNumber(routes.value[0]?.passengers, 1);
+  const originAirport = findCompactAirport(routes.value[0]?.fromAirport);
 
   return aircraftFleet.value
     .filter((aircraft) => toNumber(aircraft.capacity_passengers, 0) >= passengers)
     .filter((aircraft) =>
       hasLongHelicopterLeg.value ? !isHelicopterAircraft(aircraft) : true,
     )
-    .slice()
+    .map((aircraft) => {
+      const operationalProfile = getAircraftOperationalProfile(aircraft);
+
+      return {
+        aircraft,
+        ...operationalProfile,
+      };
+    })
+    .map((rankedAircraft) => ({
+      ...rankedAircraft,
+      groupKey: originAirport ? getAircraftDistanceGroupKey(rankedAircraft) : "unknown",
+    }))
     .sort((left, right) => {
-      const nameCompare = String(left.name || "").localeCompare(String(right.name || ""));
+      if (!originAirport) {
+        const nameCompare = String(left.aircraft.name || "").localeCompare(
+          String(right.aircraft.name || ""),
+        );
+        if (nameCompare !== 0) return nameCompare;
+
+        return String(getCompactAircraftBaseLabel(left.aircraft) || "").localeCompare(
+          String(getCompactAircraftBaseLabel(right.aircraft) || ""),
+        );
+      }
+
+      const leftGroupIndex = aircraftDistanceGroupOrder.indexOf(left.groupKey);
+      const rightGroupIndex = aircraftDistanceGroupOrder.indexOf(right.groupKey);
+      if (leftGroupIndex !== rightGroupIndex) return leftGroupIndex - rightGroupIndex;
+
+      if (left.isAtOrigin !== right.isAtOrigin) {
+        return left.isAtOrigin ? -1 : 1;
+      }
+
+      if (left.ferryLegCount !== right.ferryLegCount) {
+        return left.ferryLegCount - right.ferryLegCount;
+      }
+
+      if (left.positioningDistanceNM !== right.positioningDistanceNM) {
+        return left.positioningDistanceNM - right.positioningDistanceNM;
+      }
+
+      const nameCompare = String(left.aircraft.name || "").localeCompare(
+        String(right.aircraft.name || ""),
+      );
       if (nameCompare !== 0) return nameCompare;
 
-      return String(getCompactAircraftBaseLabel(left) || "").localeCompare(
-        String(getCompactAircraftBaseLabel(right) || ""),
+      return String(getCompactAircraftBaseLabel(left.aircraft) || "").localeCompare(
+        String(getCompactAircraftBaseLabel(right.aircraft) || ""),
       );
     });
 });
+
+const compactAircraftOptions = computed(() =>
+  rankedAircraftOptions.value.map((rankedAircraft) => rankedAircraft.aircraft),
+);
+
+const priorityAircraftOptions = computed(() => {
+  const originAirport = findCompactAirport(routes.value[0]?.fromAirport);
+  if (!originAirport) return rankedAircraftOptions.value;
+
+  const mustShow = rankedAircraftOptions.value.filter((item) =>
+    ["atOrigin", "near"].includes(item.groupKey),
+  );
+  const fillable = rankedAircraftOptions.value.filter((item) =>
+    ["regional", "other"].includes(item.groupKey),
+  );
+
+  if (mustShow.length >= INITIAL_AIRCRAFT_VISIBLE_LIMIT) return mustShow;
+
+  return [
+    ...mustShow,
+    ...fillable.slice(0, INITIAL_AIRCRAFT_VISIBLE_LIMIT - mustShow.length),
+  ];
+});
+
+const visibleRankedAircraftOptions = computed(() => {
+  const originAirport = findCompactAirport(routes.value[0]?.fromAirport);
+  if (!originAirport) return rankedAircraftOptions.value;
+  if (showAllAircraft.value) return rankedAircraftOptions.value;
+  if (!rankedAircraftOptions.value.length) return [];
+
+  let visible = priorityAircraftOptions.value;
+  if (!visible.length) {
+    visible = rankedAircraftOptions.value.slice(0, INITIAL_AIRCRAFT_VISIBLE_LIMIT);
+  }
+
+  const selectedAircraftId = routes.value[0]?.aircraft_id;
+  if (
+    selectedAircraftId &&
+    !visible.some((item) => String(item.aircraft.id) === String(selectedAircraftId))
+  ) {
+    const selected = rankedAircraftOptions.value.find(
+      (item) => String(item.aircraft.id) === String(selectedAircraftId),
+    );
+    if (selected) visible = [...visible, selected];
+  }
+
+  return visible;
+});
+
+const visibleAircraftOptionGroups = computed(() =>
+  aircraftDistanceGroupOrder
+    .map((key) => ({
+      key,
+      label: aircraftDistanceGroupLabels.value[key],
+      aircraft: visibleRankedAircraftOptions.value
+        .filter((item) => item.groupKey === key)
+        .map((item) => item.aircraft),
+    }))
+    .filter((group) => group.aircraft.length),
+);
+
+const hasHiddenAircraftOptions = computed(
+  () => visibleRankedAircraftOptions.value.length < rankedAircraftOptions.value.length || showAllAircraft.value,
+);
+
+const aircraftOptionsHelperText = computed(() =>
+  showAllAircraft.value ? copy.value.aircraftOptionsHelperAll : copy.value.aircraftOptionsHelper,
+);
+
+const getAircraftOptionBadge = (aircraft) => {
+  const rankedAircraft = rankedAircraftOptions.value.find(
+    (item) => String(item.aircraft.id) === String(aircraft?.id),
+  );
+
+  if (rankedAircraft?.groupKey === "atOrigin") return copy.value.aircraftBadgeAtOrigin;
+  if (rankedAircraft?.groupKey === "near") return copy.value.aircraftBadgeNear;
+  return "";
+};
+
+const getAircraftOptionLabel = (aircraft) => {
+  const badge = getAircraftOptionBadge(aircraft);
+  return [
+    aircraft.name,
+    `${aircraft.capacity_passengers || "-"} pax`,
+    getCompactAircraftBaseLabel(aircraft),
+    badge,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+};
+
+const toggleAircraftOptionsVisibility = () => {
+  showAllAircraft.value = !showAllAircraft.value;
+};
 
 const selectedAircraft = computed(() => getAircraftById(routes.value[0]?.aircraft_id));
 
@@ -1265,10 +1667,54 @@ const formatCompactCurrency = (value) =>
     maximumFractionDigits: 0,
   }).format(toNumber(value, 0));
 
-const routeSummary = computed(() => {
-  const routeItem = routes.value[0] || {};
-  return `${routeItem.fromAirport || "-"} -> ${routeItem.toAirport || "-"} / ${routeItem.passengers || 1} ${copy.value.passengers}`;
-});
+const formatAirportSummary = (airportCode) => {
+  const airport = findCompactAirport(airportCode);
+  const code = getAirportOptionValue(airport) || airportCode || "-";
+  const city = airport?.ciudad || airport?.city || "";
+  return city && code ? `${city} (${code})` : code;
+};
+
+const formatSummaryDateTime = (value, includeYear = true) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  const formattedDate = new Intl.DateTimeFormat(isSpanish.value ? "es-MX" : "en-US", {
+    day: "2-digit",
+    month: "short",
+    ...(includeYear ? { year: "numeric" } : {}),
+  }).format(date);
+  const formattedTime = new Intl.DateTimeFormat(isSpanish.value ? "es-MX" : "en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+
+  return `${formattedDate.toUpperCase()} · ${formattedTime}`;
+};
+
+const getSegmentTitle = (index) =>
+  isSpanish.value ? `Vuelo ${index + 1}` : `Flight ${index + 1}`;
+
+const itinerarySummary = computed(() =>
+  routes.value
+    .filter((routeItem) => routeItem.fromAirport && routeItem.toAirport && routeItem.start_date)
+    .map((routeItem, index) => ({
+      key: `${index}-${routeItem.fromAirport}-${routeItem.toAirport}-${routeItem.start_date}`,
+      title: getSegmentTitle(index),
+      route:
+        tripMode.value === "round-trip" && index === 0
+          ? `${formatAirportSummary(routeItem.fromAirport)} ⇄ ${formatAirportSummary(routeItem.toAirport)}`
+          : `${formatAirportSummary(routeItem.fromAirport)} → ${formatAirportSummary(routeItem.toAirport)}`,
+      date: formatSummaryDateTime(routeItem.start_date, tripMode.value !== "multi-city"),
+    })),
+);
+
+const routeSummary = computed(() =>
+  itinerarySummary.value.length
+    ? itinerarySummary.value.map((item) => item.route).join(" / ")
+    : `- / ${routes.value[0]?.passengers || 1} ${copy.value.passengers}`,
+);
 
 const maxReachableStep = computed(() => {
   if (!isItineraryComplete.value) return 0;
@@ -1278,23 +1724,63 @@ const maxReachableStep = computed(() => {
 });
 
 const compactSubmitLabel = computed(() =>
-  activeStep.value === 0
-    ? copy.value.searchAvailabilityCta
-    : activeStep.value === 3
-      ? copy.value.sendProposalCta
-      : copy.value.continueCta,
+  loading.value && activeStep.value === 0
+    ? copy.value.searchingAvailabilityCta
+    : activeStep.value === 0
+      ? copy.value.searchAvailabilityCta
+      : activeStep.value === 3
+        ? copy.value.sendProposalCta
+        : copy.value.continueCta,
 );
 
-const isItineraryComplete = computed(() => {
-  const routeItem = routes.value[0] || {};
-  return Boolean(
-    routeItem.fromAirport &&
-      routeItem.toAirport &&
-      norm(routeItem.fromAirport) !== norm(routeItem.toAirport) &&
-      routeItem.start_date &&
-      toNumber(routeItem.passengers) > 0,
-  );
-});
+const getItineraryValidationMessage = () => {
+  const customerRoutes = routes.value;
+  const requiredCount =
+    tripMode.value === "one-way" ? 1 : tripMode.value === "round-trip" ? 2 : customerRoutes.length;
+
+  if (customerRoutes.length < requiredCount) return copy.value.incompleteFlights;
+
+  for (let index = 0; index < requiredCount; index += 1) {
+    const routeItem = customerRoutes[index] || {};
+    if (!routeItem.fromAirport || !routeItem.toAirport || !routeItem.start_date || !routeItem.passengers) {
+      return tripMode.value === "round-trip" && index === 1
+        ? copy.value.missingReturn
+        : copy.value.incompleteFlights;
+    }
+    if (norm(routeItem.fromAirport) === norm(routeItem.toAirport)) {
+      return copy.value.sameAirport;
+    }
+    if (toNumber(routeItem.passengers) <= 0) {
+      return copy.value.incompleteFlights;
+    }
+  }
+
+  if (tripMode.value === "round-trip") {
+    const departure = new Date(customerRoutes[0].start_date);
+    const returnDate = new Date(customerRoutes[1].start_date);
+    if (!(returnDate > departure)) return copy.value.invalidReturnDate;
+  }
+
+  if (tripMode.value === "multi-city") {
+    for (let index = 1; index < customerRoutes.length; index += 1) {
+      const previousDate = new Date(customerRoutes[index - 1].start_date);
+      const currentDate = new Date(customerRoutes[index].start_date);
+      if (!(currentDate > previousDate)) return copy.value.invalidChronology;
+    }
+  }
+
+  return "";
+};
+
+const isItineraryComplete = computed(() => !getItineraryValidationMessage());
+
+const canSearchAvailability = computed(() =>
+  activeStep.value !== 0 || (isItineraryComplete.value && !loading.value),
+);
+
+const isPrimaryButtonDisabled = computed(() =>
+  loading.value || (activeStep.value === 0 && !canSearchAvailability.value),
+);
 
 const isContactComplete = computed(() =>
   Boolean(form.name && form.email && form.phone),
@@ -1326,22 +1812,22 @@ const assignAirportToSpecificRoute = (routeItem, direction, airport) => {
   routeItem[`${prefix}Country`] = airport.country || "";
 };
 
-const setCompactAirport = (direction) => {
+const setCompactAirport = (direction, selectedAirport = null) => {
   const routeItem = routes.value[0];
   const code = direction === "from" ? routeItem.fromAirport : routeItem.toAirport;
-  assignAirportToRoute(direction, findCompactAirport(code));
+  assignAirportToRoute(direction, selectedAirport || findCompactAirport(code));
   compactError.value = "";
   if (tripMode.value === "round-trip") {
     syncReturnRouteFromOutbound();
   }
 };
 
-const setExtraAirport = (routeIndex, direction) => {
+const setExtraAirport = (routeIndex, direction, selectedAirport = null) => {
   const routeItem = routes.value[routeIndex];
   if (!routeItem) return;
 
   const code = direction === "from" ? routeItem.fromAirport : routeItem.toAirport;
-  assignAirportToSpecificRoute(routeItem, direction, findCompactAirport(code));
+  assignAirportToSpecificRoute(routeItem, direction, selectedAirport || findCompactAirport(code));
   compactError.value = "";
 };
 
@@ -1402,17 +1888,8 @@ const goToFullForm = () => {
 };
 
 const addCompactFlight = () => {
-  tripMode.value = "round-trip";
+  tripMode.value = "multi-city";
   compactError.value = "";
-
-  if (routes.value.length <= 1) {
-    routes.value.push({
-      id: Date.now() + Math.random(),
-      ...emptyRoute(),
-    });
-    syncReturnRouteFromOutbound();
-    return;
-  }
 
   const lastRoute = routes.value[routes.value.length - 1];
   routes.value.push({
@@ -1437,32 +1914,71 @@ const syncReturnRouteFromOutbound = () => {
   inbound.passengers = outbound.passengers || 1;
   inbound.aircraft_id = outbound.aircraft_id || null;
 
-  if (!inbound.start_date && outbound.start_date) {
-    const date = new Date(outbound.start_date);
-    date.setDate(date.getDate() + 2);
-    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-    inbound.start_date = date.toISOString().slice(0, 16);
+  if (inbound.start_date && outbound.start_date) {
+    const returnDate = new Date(inbound.start_date);
+    const departureDate = new Date(outbound.start_date);
+
+    if (!(returnDate > departureDate)) {
+      inbound.start_date = "";
+      inbound.end_date = "";
+      compactError.value = copy.value.invalidReturnDate;
+      return;
+    }
   }
 
   syncExtraEndDate(1);
 };
 
+const ensureRouteCountForTripMode = (mode) => {
+  const firstRoute = routes.value[0] || emptyRoute();
+
+  if (mode === "one-way") {
+    routes.value = [firstRoute];
+    return;
+  }
+
+  if (mode === "round-trip") {
+    const existingReturn = routes.value[1] || {
+      id: Date.now() + Math.random(),
+      ...emptyRoute(),
+    };
+    routes.value = [firstRoute, existingReturn];
+    syncReturnRouteFromOutbound();
+    return;
+  }
+
+  if (mode === "multi-city") {
+    if (routes.value.length < 2) {
+      const lastRoute = routes.value[routes.value.length - 1] || firstRoute;
+      routes.value.push({
+        id: Date.now() + Math.random(),
+        ...emptyRoute(),
+        fromAirport: lastRoute?.toAirport || "",
+        fromCity: lastRoute?.toCity || "",
+        fromState: lastRoute?.toState || "",
+        fromCountry: lastRoute?.toCountry || "",
+        passengers: lastRoute?.passengers || firstRoute?.passengers || 1,
+        aircraft_id: lastRoute?.aircraft_id || firstRoute?.aircraft_id || null,
+      });
+    }
+  }
+};
+
 const setTripMode = (mode) => {
+  if (!["one-way", "round-trip", "multi-city"].includes(mode)) return;
   tripMode.value = mode;
   compactError.value = "";
-
-  if (mode === "one-way" && routes.value.length > 1) {
-    routes.value = [routes.value[0]];
-  }
+  ensureRouteCountForTripMode(mode);
 };
 
 const removeExtraFlight = (routeIndex) => {
   if (routeIndex <= 0 || !routes.value[routeIndex]) return;
+  if (tripMode.value === "multi-city" && routes.value.length <= 2) return;
 
   routes.value.splice(routeIndex, 1);
   delete extraRouteDateInputRefs.value[routeIndex];
 
-  if (routes.value.length <= 1) {
+  if (tripMode.value !== "multi-city" && routes.value.length <= 1) {
     tripMode.value = "one-way";
   }
 
@@ -1508,29 +2024,16 @@ const validateCompactStep = (step = activeStep.value) => {
   compactError.value = "";
 
   if (step === 0) {
-    const routeItem = routes.value[0] || {};
-    if (!routeItem.fromAirport || !routeItem.toAirport || !routeItem.start_date || !routeItem.passengers) {
-      compactError.value = copy.value.missingItinerary;
+    ensureRouteCountForTripMode(tripMode.value);
+    if (tripMode.value === "round-trip") syncReturnRouteFromOutbound();
+
+    const itineraryError = getItineraryValidationMessage();
+    if (itineraryError) {
+      compactError.value = itineraryError;
       return false;
     }
-    if (norm(routeItem.fromAirport) === norm(routeItem.toAirport)) {
-      compactError.value = copy.value.sameAirport;
-      return false;
-    }
-    if (hasReturnFlight.value) {
-      for (let index = 1; index < routes.value.length; index += 1) {
-        const extraRoute = routes.value[index] || {};
-        if (!extraRoute.fromAirport || !extraRoute.toAirport || !extraRoute.start_date || !extraRoute.passengers) {
-          compactError.value = copy.value.missingReturn;
-          return false;
-        }
-        if (norm(extraRoute.fromAirport) === norm(extraRoute.toAirport)) {
-          compactError.value = copy.value.sameAirport;
-          return false;
-        }
-        syncExtraEndDate(index);
-      }
-    }
+
+    routes.value.forEach((_, index) => syncExtraEndDate(index));
     syncCompactEndDate();
   }
 
@@ -1571,6 +2074,7 @@ const goToStep = (step) => {
 };
 
 const handleCompactSubmit = () => {
+  if (loading.value) return;
   if (!validateCompactStep()) return;
 
   if (activeStep.value < 3) {
@@ -2258,6 +2762,92 @@ const calculatePrice = (routeItem, routeIndex = 0, routeList = []) => {
   };
 };
 
+const addMinutesToDate = (date, minutes) =>
+  new Date(date.getTime() + Math.round(minutes) * 60000);
+
+const subtractMinutesFromDate = (date, minutes) =>
+  new Date(date.getTime() - Math.round(minutes) * 60000);
+
+const getBreakdownDurationMinutes = (breakdown) => {
+  const estimatedMinutes = toNumber(breakdown?.estimatedMinutes);
+  if (estimatedMinutes > 0) return estimatedMinutes;
+
+  const hours = toNumber(breakdown?.hours);
+  return hours > 0 ? Math.round(hours * 60) : 0;
+};
+
+const getOperationalReservationBounds = (aircraftId, routeItems = validRoutes.value) => {
+  const customerRoutes = routeItems
+    .filter(
+      (routeItem) =>
+        Number(routeItem.passengers) > 0 &&
+        routeItem.fromAirport &&
+        routeItem.toAirport &&
+        routeItem.start_date,
+    )
+    .map((routeItem) => ({
+      ...routeItem,
+      aircraft_id: aircraftId,
+    }));
+
+  if (!aircraftId || !customerRoutes.length) return getReservationBounds(routeItems);
+
+  const operationalRoutes = buildOperationalRoutesForAircraft(aircraftId, customerRoutes);
+  if (!operationalRoutes.length) return getReservationBounds(routeItems);
+
+  const firstCustomerRoute = operationalRoutes.find((routeItem) => !routeItem.positioning);
+  if (!firstCustomerRoute?.start_date) return getReservationBounds(routeItems);
+
+  const firstCustomerStart = new Date(firstCustomerRoute.start_date);
+  if (Number.isNaN(firstCustomerStart.getTime())) return getReservationBounds(routeItems);
+
+  const routeBreakdowns = operationalRoutes.map((routeItem, index, routeList) =>
+    calculatePrice(routeItem, index, routeList),
+  );
+  const starts = [];
+  const ends = [];
+  let cursorEnd = null;
+
+  operationalRoutes.forEach((routeItem, index) => {
+    const durationMinutes = getBreakdownDurationMinutes(routeBreakdowns[index]);
+    if (!durationMinutes) return;
+
+    let start = null;
+    let end = null;
+
+    if (routeItem.positioningType === "repositioning" && !routeItem.start_date) {
+      end = firstCustomerStart;
+      start = subtractMinutesFromDate(end, durationMinutes);
+    } else if (routeItem.positioningType === "return_to_base" && !routeItem.start_date) {
+      start = cursorEnd || firstCustomerStart;
+      end = addMinutesToDate(start, durationMinutes);
+    } else if (routeItem.start_date) {
+      start = new Date(routeItem.start_date);
+      if (Number.isNaN(start.getTime())) return;
+      end = addMinutesToDate(start, durationMinutes);
+    } else if (cursorEnd) {
+      start = cursorEnd;
+      end = addMinutesToDate(start, durationMinutes);
+    }
+
+    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
+
+    starts.push(start);
+    ends.push(end);
+    cursorEnd = end;
+  });
+
+  if (!starts.length || !ends.length) return getReservationBounds(routeItems);
+
+  starts.sort((left, right) => left - right);
+  ends.sort((left, right) => left - right);
+
+  return {
+    startISO: starts[0].toISOString(),
+    endISO: ends[ends.length - 1].toISOString(),
+  };
+};
+
 const validRoutes = computed(() =>
   routes.value.filter(
     (routeItem) =>
@@ -2277,48 +2867,10 @@ const priceBreakdowns = computed(() =>
 const pricedRoutes = computed(() => {
   if (!validRoutes.value.length) return [];
 
-  const firstRoute = validRoutes.value[0];
-  const lastRoute = validRoutes.value[validRoutes.value.length - 1];
-  const aircraftId = firstRoute?.aircraft_id;
-  const aircraftBase = getAircraftBaseAirport(aircraftId);
-  const firstRouteOrigin = findAirportForRoute(firstRoute, "from");
-  const lastRouteDestination = findAirportForRoute(lastRoute, "to");
-
-  if (!aircraftBase) {
-    return [...validRoutes.value];
-  }
-
-  if (itineraryStartsAndEndsAtBase(validRoutes.value, aircraftBase)) {
-    return [...validRoutes.value];
-  }
-
-  const calculatedRoutes = [];
-
-  if (!isRouteEndpointAtBase(firstRoute, "from", aircraftBase)) {
-    calculatedRoutes.push(
-      buildPositioningRoute(
-        aircraftId,
-        aircraftBase,
-        firstRouteOrigin || firstRoute.fromAirport,
-        "repositioning",
-      ),
-    );
-  }
-
-  calculatedRoutes.push(...validRoutes.value);
-
-  if (!isRouteEndpointAtBase(lastRoute, "to", aircraftBase)) {
-    calculatedRoutes.push(
-      buildPositioningRoute(
-        aircraftId,
-        lastRouteDestination || lastRoute.toAirport,
-        aircraftBase,
-        "return_to_base",
-      ),
-    );
-  }
-
-  return calculatedRoutes;
+  return buildOperationalRoutesForAircraft(
+    getRouteAircraftId(validRoutes.value[0]),
+    validRoutes.value,
+  );
 });
 
 const pricedBreakdowns = computed(() =>
@@ -2579,7 +3131,10 @@ const handleConfirm = async () => {
 
     if (!aircraftId || !selectedAircraft) throw new Error(copy.value.noAircraft);
 
-    const { startISO, endISO } = getReservationBounds(validRoutes.value);
+    const { startISO, endISO } = getOperationalReservationBounds(
+      aircraftId,
+      validRoutes.value,
+    );
 
     const { data: existingReservations, error: availabilityError } =
       await supabase
@@ -2762,26 +3317,33 @@ watch(
 );
 
 watch(
-  () => [
-    routes.value[0].start_date,
-    routes.value[0].end_date,
-    routes.value[0].aircraft_id,
-  ],
+  () =>
+    routes.value.map((routeItem) =>
+      [
+        routeItem.fromAirport,
+        routeItem.toAirport,
+        routeItem.start_date,
+        routeItem.end_date,
+        routeItem.aircraft_id,
+      ].join("|"),
+    ),
   async () => {
     const currentRoute = routes.value[0];
     if (!currentRoute.start_date || !currentRoute.aircraft_id) return;
 
-    const start = new Date(currentRoute.start_date).toISOString();
-    const end = currentRoute.end_date
-      ? new Date(currentRoute.end_date).toISOString()
-      : start;
+    const { startISO, endISO } = getOperationalReservationBounds(
+      currentRoute.aircraft_id,
+      validRoutes.value,
+    );
+
+    if (!startISO || !endISO) return;
 
     const { data } = await supabase
       .from("reservations")
       .select("id")
       .eq("aircraft_id", currentRoute.aircraft_id)
-      .lt("start_datetime", end)
-      .gt("end_datetime", start);
+      .lt("start_datetime", endISO)
+      .gt("end_datetime", startISO);
 
     aircraftAvailability.value = !data?.length;
   },
@@ -2794,6 +3356,23 @@ watch(
       if (index === 0) return;
       routeItem.aircraft_id = aircraftId || null;
     });
+  },
+);
+
+watch(
+  () => routes.value[0]?.passengers,
+  (passengers) => {
+    routes.value.forEach((routeItem, index) => {
+      if (index === 0) return;
+      routeItem.passengers = passengers || 1;
+    });
+  },
+);
+
+watch(
+  () => [routes.value[0]?.fromAirport, routes.value[0]?.passengers, tripMode.value],
+  () => {
+    showAllAircraft.value = false;
   },
 );
 
@@ -2953,8 +3532,8 @@ watch(
 
 .trip-toggle {
   display: inline-grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-width: 340px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 520px;
   min-height: 48px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
@@ -3283,6 +3862,39 @@ watch(
   background: rgba(255, 255, 255, 0.04);
 }
 
+.aircraft-options-helper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.aircraft-options-helper button {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--gold-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aircraft-options-helper button:focus-visible {
+  outline: 2px solid rgba(240, 200, 117, 0.82);
+  outline-offset: 4px;
+}
+
 .compact-aircraft-summary strong {
   color: #ffffff;
   font-size: 0.96rem;
@@ -3412,6 +4024,12 @@ watch(
   font-size: 0.82rem;
 }
 
+.availability-submit:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.45);
+  opacity: 0.58;
+}
+
 .add-flight-button {
   display: inline-flex;
   align-items: center;
@@ -3425,6 +4043,78 @@ watch(
   color: var(--gold-2);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.itinerary-summary {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+  margin: 18px auto 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(240, 200, 117, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.itinerary-summary__head,
+.itinerary-summary__body,
+.itinerary-summary__leg {
+  display: grid;
+  gap: 6px;
+}
+
+.itinerary-summary__head {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.itinerary-summary__head span,
+.itinerary-summary__leg span,
+.itinerary-summary__body span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.itinerary-summary__head strong,
+.itinerary-summary__body strong {
+  color: var(--gold-2);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.itinerary-summary__body {
+  color: #ffffff;
+}
+
+.itinerary-summary__body em {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.itinerary-summary__leg {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.itinerary-summary__leg:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.itinerary-summary__leg small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -3670,7 +4360,7 @@ watch(
   }
 
   .trip-toggle {
-    width: min(100%, 340px);
+    width: min(100%, 520px);
     min-width: 0;
   }
 
@@ -3779,6 +4469,11 @@ watch(
   .trust-strip,
   .why-card {
     padding: 22px 18px;
+  }
+
+  .aircraft-options-helper {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .availability-field small {
