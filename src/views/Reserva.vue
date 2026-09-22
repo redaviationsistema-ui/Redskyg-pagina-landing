@@ -561,12 +561,15 @@ import {
 import MainLayout from "@/layouts/MainLayout.vue";
 import QuoteModal from "@/components/reservation/QuoteModal.vue";
 import AirportAutocomplete from "@/components/reservation/AirportAutocomplete.vue";
+import {
+  evaluateAircraftAirport,
+  getWorstOperationalStatus,
+} from "@/services/aircraftEligibility";
 import { generateReservationPDF } from "@/utils/pdfGenerator";
 
 const AIRCRAFT_TABLE = "aircraft_fleet";
 const COMMERCIAL_MARGIN_RATE = 0.15;
 const OTHER_CHARGES_DEFAULT = 0;
-const HELICOPTER_MAX_LEG_DISTANCE_NM = 200;
 const AIRCRAFT_DISTANCE_LIMITS = {
   near: 150,
   regional: 350,
@@ -671,7 +674,7 @@ const copy = computed(() =>
         selectAircraft: "Selecciona aeronave",
         selectAircraftCta: "Elegir aeronave",
         viewAircraftCta: "Ver aeronaves",
-        noAircraftOptions: "No hay aeronaves disponibles para esa cantidad de pasajeros.",
+        noAircraftOptions: "No encontramos aeronaves disponibles con validación automática para esta ruta.",
         aircraftOptionsHelper: "Mostrando aeronaves más cercanas a tu punto de salida.",
         aircraftOptionsHelperAll: "Mostrando todas las aeronaves elegibles.",
         showMoreAircraft: "Ver más aeronaves",
@@ -828,7 +831,7 @@ const copy = computed(() =>
         selectAircraft: "Select aircraft",
         selectAircraftCta: "Choose aircraft",
         viewAircraftCta: "View aircraft",
-        noAircraftOptions: "No aircraft are available for that passenger count.",
+        noAircraftOptions: "No aircraft with automatic validation are available for this route.",
         aircraftOptionsHelper: "Showing aircraft closest to your departure point.",
         aircraftOptionsHelperAll: "Showing all eligible aircraft.",
         showMoreAircraft: "Show more aircraft",
@@ -1189,6 +1192,11 @@ const airportsNational = ref([]);
 const airportsInternational = ref([]);
 const aircraftFleet = ref([]);
 const blockedDates = ref([]);
+const aircraftEligibilityByKey = ref({});
+const aircraftRangeEligibilityByKey = ref({});
+const eligibleAircraftByRouteKey = ref({});
+const aircraftEligibilityLoading = ref(false);
+let aircraftEligibilityRequestId = 0;
 
 const citiesByCountry = (country) => {
   if (!country) return [];
@@ -1220,39 +1228,56 @@ const countries = computed(() => {
 const getAirportOptionValue = (airport) =>
   (airport?.iata || airport?.IATA || airport?.aeropuerto || "").toString().trim();
 
+const getAirportEligibilityId = (airport) =>
+  airport?.ID ?? null;
+
 const allAirports = computed(() => [
   ...airportsNational.value.map((airport) => ({
     id: airport.id || airport.ID || airport.IATA || airport.AEROPUERTO,
+    ID: airport.ID || airport.id || null,
     source: "NATIONAL",
     name: airport.AEROPUERTO,
     aeropuerto: airport.AEROPUERTO,
+    AEROPUERTO: airport.AEROPUERTO,
     iata: (airport.IATA || airport.iata || "").toUpperCase(),
+    IATA: (airport.IATA || airport.iata || "").toUpperCase(),
     icao: (airport.ICAO || airport.icao || "").toUpperCase(),
+    ICAO: (airport.ICAO || airport.icao || "").toUpperCase(),
     city: airport.CIUDAD,
     ciudad: airport.CIUDAD,
     estado: airport.ESTADO,
     country: "MEXICO",
-    latitude: airport.LATITUDE,
-    longitude: airport.LONGITUDE,
-    lat: airport.LATITUDE,
-    lng: airport.LONGITUDE,
+    latitude: airport.LATITUDE ?? airport.latitude ?? airport.lat,
+    longitude: airport.LONGITUDE ?? airport.longitude ?? airport.lng ?? airport.lon,
+    LATITUDE: airport.LATITUDE ?? airport.latitude ?? airport.lat,
+    LONGITUDE: airport.LONGITUDE ?? airport.longitude ?? airport.lng ?? airport.lon,
+    lat: airport.LATITUDE ?? airport.latitude ?? airport.lat,
+    lng: airport.LONGITUDE ?? airport.longitude ?? airport.lng ?? airport.lon,
     type: norm(airport.TYPE),
+    TYPE: airport.TYPE || airport.type || "",
   })),
   ...airportsInternational.value.map((airport) => ({
     id: airport.id || airport.ID || airport.IATA || airport.AEROPUERTO,
+    ID: airport.ID || airport.id || null,
     source: "INTERNATIONAL",
     name: airport.AEROPUERTO,
     aeropuerto: airport.AEROPUERTO,
+    AEROPUERTO: airport.AEROPUERTO,
     iata: (airport.IATA || "").toUpperCase(),
+    IATA: (airport.IATA || "").toUpperCase(),
     icao: (airport.ICAO || airport.icao || "").toUpperCase(),
+    ICAO: (airport.ICAO || airport.icao || "").toUpperCase(),
     city: airport.CIUDAD,
     ciudad: airport.CIUDAD,
     country: airport.COUNTRY,
-    latitude: airport.LATITUDE,
-    longitude: airport.LONGITUDE,
-    lat: airport.LATITUDE,
-    lng: airport.LONGITUDE,
+    latitude: airport.LATITUDE ?? airport.latitude ?? airport.lat,
+    longitude: airport.LONGITUDE ?? airport.longitude ?? airport.lng ?? airport.lon,
+    LATITUDE: airport.LATITUDE ?? airport.latitude ?? airport.lat,
+    LONGITUDE: airport.LONGITUDE ?? airport.longitude ?? airport.lng ?? airport.lon,
+    lat: airport.LATITUDE ?? airport.latitude ?? airport.lat,
+    lng: airport.LONGITUDE ?? airport.longitude ?? airport.lng ?? airport.lon,
     type: norm(airport.TYPE),
+    TYPE: airport.TYPE || airport.type || "",
   })),
 ]);
 
@@ -1459,6 +1484,227 @@ const getAircraftOperationalProfile = (aircraft) => {
   };
 };
 
+const getRouteAirportEligibilityIds = (routeItem) => {
+  const originAirport = findCompactAirport(routeItem?.fromAirport);
+  const destinationAirport = findCompactAirport(routeItem?.toAirport);
+  const originAirportId = getAirportEligibilityId(originAirport);
+  const destinationAirportId = getAirportEligibilityId(destinationAirport);
+
+  if (!originAirportId || !destinationAirportId) return null;
+
+  return {
+    originAirport,
+    destinationAirport,
+    originAirportId,
+    destinationAirportId,
+  };
+};
+
+const currentEligibilityRoutePairs = computed(() =>
+  routes.value
+    .filter(
+      (routeItem) =>
+        Number(routeItem.passengers) > 0 &&
+        routeItem.fromAirport &&
+        routeItem.toAirport,
+    )
+    .map(getRouteAirportEligibilityIds)
+    .filter(Boolean),
+);
+
+const currentEligibilityRouteKey = computed(() =>
+  currentEligibilityRoutePairs.value
+    .map(
+      ({ originAirportId, destinationAirportId }) =>
+        `${originAirportId}:${destinationAirportId}`,
+    )
+    .join("|"),
+);
+
+const getAircraftEligibilityKey = (aircraftId) =>
+  currentEligibilityRouteKey.value
+    ? `${aircraftId}|${currentEligibilityRouteKey.value}`
+    : "";
+
+const getAircraftOperationalEligibility = (aircraft) => {
+  const key = getAircraftEligibilityKey(aircraft?.id);
+  return key ? aircraftEligibilityByKey.value[key] : null;
+};
+
+const getAircraftRangeEligibility = (aircraft) => {
+  const key = getAircraftEligibilityKey(aircraft?.id);
+  return key ? aircraftRangeEligibilityByKey.value[key] : null;
+};
+
+const isAircraftOperationallyAllowed = (aircraft) => {
+  if (!currentEligibilityRouteKey.value) return true;
+
+  const operationalEligibility = getAircraftOperationalEligibility(aircraft);
+  const rangeEligibility = getAircraftRangeEligibility(aircraft);
+
+  if (!operationalEligibility || !rangeEligibility) return false;
+
+  return (
+    operationalEligibility.routeStatus === "ALLOWED_WITH_VALIDATION" &&
+    rangeEligibility.status !== "RANGE_BLOCKED"
+  );
+};
+
+const toRadians = (value) => (Number(value) * Math.PI) / 180;
+
+const calculateDistanceNm = (lat1, lon1, lat2, lon2) => {
+  const earthRadiusNm = 3440.065;
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadiusNm * c;
+};
+
+const getAirportCoordinatePair = (airport) => {
+  const lat = Number(airport?.LATITUDE ?? airport?.latitude ?? airport?.lat);
+  const lon = Number(
+    airport?.LONGITUDE ??
+      airport?.longitude ??
+      airport?.lng ??
+      airport?.lon,
+  );
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon) ||
+    lat < -90 ||
+    lat > 90 ||
+    lon < -180 ||
+    lon > 180
+  ) {
+    return null;
+  }
+
+  return { lat, lon };
+};
+
+const calculateRoutePairDistanceNm = ({ originAirport, destinationAirport }) => {
+  const originCoords = getAirportCoordinatePair(originAirport);
+  const destinationCoords = getAirportCoordinatePair(destinationAirport);
+  const routeDistanceNm =
+    originCoords && destinationCoords
+      ? Number(
+          calculateDistanceNm(
+            originCoords.lat,
+            originCoords.lon,
+            destinationCoords.lat,
+            destinationCoords.lon,
+          ).toFixed(1),
+        )
+      : null;
+
+  return {
+    originCoords,
+    destinationCoords,
+    routeDistanceNm,
+  };
+};
+
+const evaluateAircraftRangeForRoutePairs = (aircraft, routePairs) => {
+  const aircraftRangeNm = Number(aircraft?.range_nm ?? aircraft?.rangeNm);
+
+  if (!Number.isFinite(aircraftRangeNm) || aircraftRangeNm <= 0) {
+    console.warn("[RANGE CHECK WARNING]", {
+      aircraft: aircraft?.name,
+      rangeNm: aircraft?.range_nm ?? aircraft?.rangeNm,
+      reason: "Missing aircraft range data",
+    });
+
+    return {
+      status: "RANGE_UNKNOWN",
+      reason: "Missing aircraft range data",
+      routeDistanceNm: null,
+      aircraftRangeNm: Number.isFinite(aircraftRangeNm) ? aircraftRangeNm : null,
+      legs: [],
+    };
+  }
+
+  const legs = [];
+
+  for (const { originAirport, destinationAirport } of routePairs) {
+    const { originCoords, destinationCoords, routeDistanceNm } =
+      calculateRoutePairDistanceNm({ originAirport, destinationAirport });
+
+    if (!originCoords || !destinationCoords || routeDistanceNm === null) {
+      console.warn("[RANGE CHECK WARNING]", {
+        aircraft: aircraft?.name,
+        origin: originAirport?.ICAO,
+        destination: destinationAirport?.ICAO,
+        reason: "Missing valid airport coordinates",
+      });
+
+      return {
+        status: "RANGE_UNKNOWN",
+        reason: "Missing valid airport coordinates",
+        routeDistanceNm: null,
+        aircraftRangeNm,
+        legs,
+      };
+    }
+
+    const leg = {
+      routeDistanceNm,
+      aircraftRangeNm,
+      originAirportId: originAirport?.ID,
+      destinationAirportId: destinationAirport?.ID,
+    };
+
+    legs.push(leg);
+
+    if (routeDistanceNm > aircraftRangeNm) {
+      return {
+        status: "RANGE_BLOCKED",
+        routeDistanceNm,
+        aircraftRangeNm,
+        legs,
+      };
+    }
+  }
+
+  return {
+    status: "ALLOWED",
+    routeDistanceNm: legs.length
+      ? Math.max(...legs.map((leg) => leg.routeDistanceNm))
+      : null,
+    aircraftRangeNm,
+    legs,
+  };
+};
+
+const withOperationalEligibility = (aircraft) => {
+  const eligibility = getAircraftOperationalEligibility(aircraft);
+  const rangeEligibility = getAircraftRangeEligibility(aircraft);
+  if (!eligibility && !rangeEligibility) return aircraft;
+
+  return {
+    ...aircraft,
+    ...(eligibility
+      ? {
+          operationalEligibility: {
+            status: eligibility.routeStatus,
+            origin: eligibility.origin,
+            destination: eligibility.destination,
+            ...(eligibility.error ? { error: true } : {}),
+          },
+        }
+      : {}),
+    ...(rangeEligibility ? { rangeEligibility } : {}),
+  };
+};
+
 const getAircraftDistanceGroupKey = (rankedAircraft) => {
   if (rankedAircraft.isAtOrigin) return "atOrigin";
   if (!Number.isFinite(rankedAircraft.positioningDistanceNM)) return "unknown";
@@ -1478,14 +1724,17 @@ const aircraftDistanceGroupLabels = computed(() => ({
 }));
 
 const rankedAircraftOptions = computed(() => {
+  if (aircraftEligibilityLoading.value) return [];
+
   const passengers = toNumber(routes.value[0]?.passengers, 1);
   const originAirport = findCompactAirport(routes.value[0]?.fromAirport);
+  const routeKey = currentEligibilityRouteKey.value;
+  const eligibleAircraft = routeKey
+    ? eligibleAircraftByRouteKey.value[routeKey] || []
+    : [];
 
-  return aircraftFleet.value
+  const ranked = eligibleAircraft
     .filter((aircraft) => toNumber(aircraft.capacity_passengers, 0) >= passengers)
-    .filter((aircraft) =>
-      hasLongHelicopterLeg.value ? !isHelicopterAircraft(aircraft) : true,
-    )
     .map((aircraft) => {
       const operationalProfile = getAircraftOperationalProfile(aircraft);
 
@@ -1535,11 +1784,44 @@ const rankedAircraftOptions = computed(() => {
         String(getCompactAircraftBaseLabel(right.aircraft) || ""),
       );
     });
+
+  console.log(
+    "[D] rankedAircraftOptions",
+    ranked.map((item) => ({
+      id: item.aircraft.id,
+      name: item.aircraft.name,
+      type: item.aircraft.aircraft_type,
+      status: item.aircraft.operationalEligibility?.status,
+      rangeStatus: item.aircraft.rangeEligibility?.status,
+    })),
+  );
+
+  return ranked;
 });
 
-const compactAircraftOptions = computed(() =>
-  rankedAircraftOptions.value.map((rankedAircraft) => rankedAircraft.aircraft),
-);
+const compactAircraftOptions = computed(() => {
+  const options = rankedAircraftOptions.value.map((rankedAircraft) => rankedAircraft.aircraft);
+
+  console.log(
+    "[E] finalAircraftOptions",
+    options.map((aircraft) => ({
+      name: aircraft.name,
+      type: aircraft.aircraft_type,
+      status: aircraft.operationalEligibility?.status,
+      rangeStatus: aircraft.rangeEligibility?.status,
+    })),
+  );
+
+  const leakedBlocked = options.filter(
+    (aircraft) => aircraft.operationalEligibility?.status === "BLOCKED",
+  );
+
+  if (leakedBlocked.length > 0) {
+    console.error("[BLOCKED LEAK INTO SELECTOR]", leakedBlocked);
+  }
+
+  return options;
+});
 
 const priorityAircraftOptions = computed(() => {
   const originAirport = findCompactAirport(routes.value[0]?.fromAirport);
@@ -1605,23 +1887,11 @@ const aircraftOptionsHelperText = computed(() =>
   showAllAircraft.value ? copy.value.aircraftOptionsHelperAll : copy.value.aircraftOptionsHelper,
 );
 
-const getAircraftOptionBadge = (aircraft) => {
-  const rankedAircraft = rankedAircraftOptions.value.find(
-    (item) => String(item.aircraft.id) === String(aircraft?.id),
-  );
-
-  if (rankedAircraft?.groupKey === "atOrigin") return copy.value.aircraftBadgeAtOrigin;
-  if (rankedAircraft?.groupKey === "near") return copy.value.aircraftBadgeNear;
-  return "";
-};
-
 const getAircraftOptionLabel = (aircraft) => {
-  const badge = getAircraftOptionBadge(aircraft);
   return [
     aircraft.name,
     `${aircraft.capacity_passengers || "-"} pax`,
     getCompactAircraftBaseLabel(aircraft),
-    badge,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -2042,17 +2312,6 @@ const validateCompactStep = (step = activeStep.value) => {
     return false;
   }
 
-  if (
-    step === 1 &&
-    hasLongHelicopterLeg.value &&
-    isHelicopterAircraft(getAircraftById(routes.value[0]?.aircraft_id))
-  ) {
-    compactError.value = isSpanish.value
-      ? "La ruta seleccionada incluye un tramo mayor de 200 NM. Selecciona una aeronave distinta a helicóptero."
-      : "The selected route includes a leg longer than 200 NM. Please select an aircraft other than a helicopter.";
-    return false;
-  }
-
   if (step === 2) {
     if (!isContactComplete.value) {
       compactError.value = copy.value.missingContact;
@@ -2156,10 +2415,6 @@ const getAircraftById = (id) =>
   aircraftFleet.value.find(
     (aircraft) => String(aircraft.id) === String(id),
   );
-const isHelicopterAircraft = (aircraft) => {
-  const aircraftType = norm(aircraft?.aircraft_type || aircraft?.type || "");
-  return aircraftType.includes("HELICOP");
-};
 const getAircraftName = (id) => getAircraftById(id)?.name || "";
 const getPrimaryAircraftId = () => routes.value[0]?.aircraft_id || null;
 const getRouteAircraftId = (routeItem) =>
@@ -2319,38 +2574,6 @@ const getRouteAirportDisplay = (routeItem, direction) => {
     direction === "from" ? routeItem?.fromAirport : routeItem?.toAirport;
   return rawCode || "-";
 };
-
-const getRouteLegDistanceNm = (routeItem) => {
-  if (!routeItem?.fromAirport || !routeItem?.toAirport) return null;
-
-  const from = findAirportForRoute(routeItem, "from");
-  const to = findAirportForRoute(routeItem, "to");
-
-  if (!from || !to) return null;
-
-  const fromLat = Number(from.lat);
-  const fromLng = Number(from.lng);
-  const toLat = Number(to.lat);
-  const toLng = Number(to.lng);
-
-  if (
-    !Number.isFinite(fromLat) ||
-    !Number.isFinite(fromLng) ||
-    !Number.isFinite(toLat) ||
-    !Number.isFinite(toLng)
-  ) {
-    return null;
-  }
-
-  return getDistanceNM(fromLat, fromLng, toLat, toLng);
-};
-
-const hasLongHelicopterLeg = computed(() =>
-  routes.value.some((routeItem) => {
-    const distanceNm = getRouteLegDistanceNm(routeItem);
-    return distanceNm !== null && distanceNm > HELICOPTER_MAX_LEG_DISTANCE_NM;
-  }),
-);
 
 const getAircraftBaseAirport = (aircraftId) => {
   const aircraft = getAircraftById(aircraftId);
@@ -3301,19 +3524,409 @@ const resetForm = () => {
   routes.value = [emptyRoute()];
 };
 
-watch(
-  () => [hasLongHelicopterLeg.value, routes.value[0]?.aircraft_id],
-  ([hasLongLeg, aircraftId]) => {
-    if (!hasLongLeg || !aircraftId) return;
+const getDistinctRouteAirportsForEligibility = (routePairs) => {
+  const airportById = new Map();
 
-    const selectedAircraft = getAircraftById(aircraftId);
-    if (!isHelicopterAircraft(selectedAircraft)) return;
+  routePairs.forEach(({ originAirport, destinationAirport }) => {
+    [originAirport, destinationAirport].forEach((airport) => {
+      const airportId = Number(getAirportEligibilityId(airport));
+      if (!Number.isFinite(airportId)) {
+        console.warn("[AIRPORT RPC SKIPPED]", {
+          airport: airport?.ICAO || airport?.IATA || airport?.AEROPUERTO,
+          airportId: airport?.ID,
+          reason: "Invalid airport.ID",
+        });
+        return;
+      }
 
-    routes.value[0].aircraft_id = null;
-    routes.value.slice(1).forEach((routeItem) => {
-      routeItem.aircraft_id = null;
+      airportById.set(airportId, airport);
     });
+  });
+
+  return [...airportById.entries()].map(([airportId, airport]) => ({
+    airportId,
+    airport,
+  }));
+};
+
+const evaluateAircraftAirportsForRoute = async (aircraft, routeAirports) => {
+  const results = await Promise.all(
+    routeAirports.map(async ({ airportId, airport }) => {
+      try {
+        const result = await evaluateAircraftAirport(aircraft.id, airportId);
+        const status = result?.resultado_operacional || "BLOCKED";
+
+        console.log("[AIRPORT RPC]", {
+          aircraft: aircraft.name,
+          aircraftId: aircraft.id,
+          airport: airport?.ICAO,
+          airportId,
+          status,
+          reason: result?.reason || result?.motivo || result?.detalle || null,
+        });
+
+        return {
+          airport,
+          airportId,
+          result,
+          status,
+        };
+      } catch (error) {
+        console.error("[AIRPORT RPC ERROR]", {
+          aircraft_id: aircraft.id,
+          airport_id: airportId,
+          error,
+        });
+
+        return {
+          airport,
+          airportId,
+          result: null,
+          status: "RPC_ERROR",
+          error: true,
+        };
+      }
+    }),
+  );
+
+  const statuses = results.map((result) => result.status);
+  const routeStatus = statuses.includes("RPC_ERROR")
+    ? "RPC_ERROR"
+    : getWorstOperationalStatus(statuses);
+
+  console.log("[ROUTE ELIGIBILITY]", {
+    aircraft: aircraft.name,
+    statuses,
+    routeStatus,
+  });
+
+  return {
+    routeStatus,
+    airportEvaluations: results,
+    origin: results[0]?.result || null,
+    destination: results[results.length - 1]?.result || null,
+    error: statuses.includes("RPC_ERROR"),
+  };
+};
+
+watch(
+  () => [
+    currentEligibilityRouteKey.value,
+    aircraftFleet.value.map((aircraft) => aircraft.id).join("|"),
+    routes.value.map((routeItem) => Number(routeItem.passengers) || 0).join("|"),
+    tripMode.value,
+  ],
+  async ([routeKey]) => {
+    const requestId = ++aircraftEligibilityRequestId;
+    const routePairs = currentEligibilityRoutePairs.value;
+
+    if (!routeKey || !routePairs.length || !aircraftFleet.value.length) {
+      aircraftEligibilityLoading.value = false;
+      return;
+    }
+
+    aircraftEligibilityLoading.value = true;
+    eligibleAircraftByRouteKey.value = {
+      ...eligibleAircraftByRouteKey.value,
+      [routeKey]: [],
+    };
+
+    const nextEligibility = {};
+    const nextRangeEligibility = {};
+
+    const passengers = toNumber(routes.value[0]?.passengers, 1);
+    const routeAirports = getDistinctRouteAirportsForEligibility(routePairs);
+    const hasInvalidAirportIds = routePairs.some(
+      ({ originAirport, destinationAirport }) =>
+        !Number.isFinite(Number(originAirport?.ID)) ||
+        !Number.isFinite(Number(destinationAirport?.ID)),
+    );
+
+    console.log("[ELIGIBILITY START]", {
+      routeKey,
+      origin: routePairs[0]?.originAirport,
+      destination: routePairs[routePairs.length - 1]?.destinationAirport,
+      passengers,
+    });
+
+    const activeAircraft = aircraftFleet.value.filter(
+      (aircraft) => aircraft.is_active !== false,
+    );
+
+    const aircraftCandidates = activeAircraft.filter((aircraft) => {
+      const capacity = toNumber(
+        aircraft.capacity ?? aircraft.capacity_passengers,
+        0,
+      );
+      const allowed = capacity >= passengers;
+
+      if (!allowed) {
+        nextEligibility[`${aircraft.id}|${routeKey}`] = {
+          routeStatus: "CAPACITY_BLOCKED",
+          origin: null,
+          destination: null,
+        };
+      }
+
+      return allowed;
+    });
+
+    console.log(
+      "[A] aircraftCandidates",
+      aircraftCandidates.map((aircraft) => ({
+        id: aircraft.id,
+        name: aircraft.name,
+        type: aircraft.aircraft_type,
+        range_nm: aircraft.range_nm,
+      })),
+    );
+
+    routePairs.forEach(({ originAirport, destinationAirport }) => {
+      console.log("[AIRPORT COORDINATES RAW]", {
+        origin: {
+          id: originAirport?.ID,
+          name: originAirport?.AEROPUERTO,
+          LATITUDE: originAirport?.LATITUDE,
+          LONGITUDE: originAirport?.LONGITUDE,
+          latitude: originAirport?.latitude,
+          longitude: originAirport?.longitude,
+        },
+        destination: {
+          id: destinationAirport?.ID,
+          name: destinationAirport?.AEROPUERTO,
+          LATITUDE: destinationAirport?.LATITUDE,
+          LONGITUDE: destinationAirport?.LONGITUDE,
+          latitude: destinationAirport?.latitude,
+          longitude: destinationAirport?.longitude,
+        },
+      });
+
+      const { originCoords, destinationCoords, routeDistanceNm } =
+        calculateRoutePairDistanceNm({ originAirport, destinationAirport });
+
+      console.log("[ROUTE DISTANCE]", {
+        originCoords,
+        destinationCoords,
+        routeDistanceNm,
+      });
+
+      console.log("Origin:", {
+        id: originAirport?.ID,
+        icao: originAirport?.ICAO,
+        iata: originAirport?.IATA,
+      });
+
+      console.log("Destination:", {
+        id: destinationAirport?.ID,
+        icao: destinationAirport?.ICAO,
+        iata: destinationAirport?.IATA,
+      });
+
+      console.log("ROUTE TYPES", {
+        origin: {
+          id: originAirport?.ID,
+          name: originAirport?.AEROPUERTO,
+          type: originAirport?.TYPE,
+        },
+        destination: {
+          id: destinationAirport?.ID,
+          name: destinationAirport?.AEROPUERTO,
+          type: destinationAirport?.TYPE,
+        },
+      });
+    });
+
+    const rangeEligibleAircraft = [];
+
+    aircraftCandidates.forEach((aircraft) => {
+      const eligibilityKey = `${aircraft.id}|${routeKey}`;
+      const rangeEligibility = evaluateAircraftRangeForRoutePairs(aircraft, routePairs);
+      nextRangeEligibility[eligibilityKey] = rangeEligibility;
+
+      console.log("[RANGE CHECK]", {
+        aircraft: aircraft.name,
+        aircraftId: aircraft.id,
+        aircraftType: aircraft.aircraft_type,
+        routeDistanceNm: rangeEligibility.routeDistanceNm,
+        aircraftRangeRaw: aircraft.range_nm,
+        aircraftRangeNm: rangeEligibility.aircraftRangeNm,
+        result: rangeEligibility.status,
+      });
+
+      if (rangeEligibility.status === "RANGE_BLOCKED") {
+        console.log("[RANGE BLOCKED]", aircraft.name, {
+          routeDistanceNm: rangeEligibility.routeDistanceNm,
+          aircraftRangeNm: rangeEligibility.aircraftRangeNm,
+        });
+
+        nextEligibility[eligibilityKey] = {
+          routeStatus: "RANGE_BLOCKED",
+          origin: null,
+          destination: null,
+          rangeBlocked: true,
+        };
+
+        return;
+      }
+
+      rangeEligibleAircraft.push(aircraft);
+    });
+
+    console.log(
+      "[B] rangeEligibleAircraft",
+      rangeEligibleAircraft.map((aircraft) => ({
+        id: aircraft.id,
+        name: aircraft.name,
+        type: aircraft.aircraft_type,
+        range_nm: aircraft.range_nm,
+      })),
+    );
+
+    console.log(
+      "[AFTER RANGE DETAIL]",
+      rangeEligibleAircraft.map((aircraft) => ({
+        id: aircraft.id,
+        name: aircraft.name,
+        type: aircraft.aircraft_type,
+        range_nm: aircraft.range_nm,
+        rangeEligibility: nextRangeEligibility[`${aircraft.id}|${routeKey}`],
+      })),
+    );
+
+    const eligibleAircraft = [];
+
+    await Promise.all(
+      rangeEligibleAircraft.map(async (aircraft) => {
+        const eligibilityKey = `${aircraft.id}|${routeKey}`;
+
+        if (hasInvalidAirportIds || !routeAirports.length) {
+          nextEligibility[eligibilityKey] = {
+            routeStatus: "RPC_ERROR",
+            origin: null,
+            destination: null,
+            error: true,
+          };
+          return;
+        }
+
+        const routeEvaluation = await evaluateAircraftAirportsForRoute(
+          aircraft,
+          routeAirports,
+        );
+        nextEligibility[eligibilityKey] = routeEvaluation;
+        const routeStatus = nextEligibility[eligibilityKey].routeStatus;
+        const visible = routeStatus === "ALLOWED_WITH_VALIDATION";
+
+        console.log("[SELECTOR VISIBILITY]", {
+          aircraft: aircraft.name,
+          routeStatus,
+          visible,
+        });
+
+        if (!visible) {
+          console.log(
+            "[OPERATIONAL_FILTERED]",
+            aircraft.name,
+            routeStatus,
+          );
+        } else {
+          eligibleAircraft.push({
+            ...aircraft,
+            operationalEligibility: {
+              status: routeStatus,
+              origin: nextEligibility[eligibilityKey].origin,
+              destination: nextEligibility[eligibilityKey].destination,
+            },
+            rangeEligibility: nextRangeEligibility[eligibilityKey],
+          });
+
+          console.log(
+            "[ADDED TO SELECTOR]",
+            aircraft.name,
+            routeStatus,
+          );
+        }
+      }),
+    );
+
+    if (requestId !== aircraftEligibilityRequestId) return;
+
+    aircraftEligibilityByKey.value = {
+      ...aircraftEligibilityByKey.value,
+      ...nextEligibility,
+    };
+    aircraftRangeEligibilityByKey.value = {
+      ...aircraftRangeEligibilityByKey.value,
+      ...nextRangeEligibility,
+    };
+    eligibleAircraftByRouteKey.value = {
+      ...eligibleAircraftByRouteKey.value,
+      [routeKey]: eligibleAircraft,
+    };
+
+    const eligibleAircraftLog = eligibleAircraft.map((aircraft) => ({
+      id: aircraft.id,
+      name: aircraft.name,
+      type: aircraft.aircraft_type,
+      status: aircraft.operationalEligibility?.status,
+      rangeStatus: aircraft.rangeEligibility?.status,
+    }));
+
+    console.log(
+      "[C] eligibleAircraft",
+      eligibleAircraftLog,
+    );
+
+    console.log(
+      "[ELIGIBLE AIRCRAFT FINAL]",
+      eligibleAircraft.map((aircraft) => ({
+        name: aircraft.name,
+        type: aircraft.aircraft_type,
+        operationalStatus: aircraft.operationalEligibility?.status,
+        rangeStatus: aircraft.rangeEligibility?.status,
+      })),
+    );
+
+    console.log(
+      "[AFTER RPC DETAIL]",
+      eligibleAircraft.map((aircraft) => ({
+        id: aircraft.id,
+        name: aircraft.name,
+        type: aircraft.aircraft_type,
+        status: aircraft.operationalEligibility?.status,
+      })),
+    );
+
+    console.log(
+      "[ELIGIBILITY COUNTS]",
+      {
+        candidates: aircraftCandidates.length,
+        afterRange: rangeEligibleAircraft.length,
+        eligibleAfterRpc: eligibleAircraft.length,
+      },
+    );
+
+    console.log("[ELIGIBLE AIRCRAFT FINAL]", {
+      candidates: aircraftCandidates.length,
+      eligible: eligibleAircraft.length,
+      blocked: Object.values(nextEligibility).filter((eligibility) =>
+        ["BLOCKED", "RANGE_BLOCKED", "CAPACITY_BLOCKED", "RPC_ERROR"].includes(
+          eligibility?.routeStatus,
+        ),
+      ).length,
+    });
+
+    const selectedAircraft = getAircraftById(routes.value[0]?.aircraft_id);
+    if (selectedAircraft && !isAircraftOperationallyAllowed(selectedAircraft)) {
+      routes.value[0].aircraft_id = null;
+      routes.value.slice(1).forEach((routeItem) => {
+        routeItem.aircraft_id = null;
+      });
+    }
+
+    aircraftEligibilityLoading.value = false;
   },
+  { immediate: true },
 );
 
 watch(
